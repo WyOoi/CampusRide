@@ -156,14 +156,23 @@ export default function LiveTrackingPage() {
         const cleanDest = ride.destination
           .replace(/\[payment_method:[^\]]+\]/g, "")
           .replace(/\[driver_coords:[^\]]+\]/g, "")
+          .replace(/\[duitnow_qr:[^\]]+\]/g, "")
           .trim();
-        const paymentMethod = ride.destination.match(/\[payment_method:([^\]]+)\]/)?.[1] || "card";
+        const paymentMethod = ride.destination.match(/\[payment_method:([^\]]+)\]/)?.[1] || "tng";
+
+        let finalDest = `${cleanDest} [payment_method:${paymentMethod}] [driver_coords:${driverCoords[0]},${driverCoords[1]}]`;
+        if (typeof window !== "undefined") {
+          const savedQr = localStorage.getItem("campusride_driver_duitnow_qr");
+          if (savedQr && paymentMethod === "tng") {
+            finalDest += ` [duitnow_qr:${savedQr}]`;
+          }
+        }
 
         // Try updating first
         const { data, error } = await supabase
           .from("rides")
           .update({
-            destination: `${cleanDest} [payment_method:${paymentMethod}] [driver_coords:${driverCoords[0]},${driverCoords[1]}]`
+            destination: finalDest
           })
           .eq("id", dbRideId)
           .select();
@@ -174,7 +183,7 @@ export default function LiveTrackingPage() {
             id: dbRideId,
             driver_id: user.id,
             pickup_location: ride.origin,
-            destination: `${cleanDest} [payment_method:${paymentMethod}] [driver_coords:${driverCoords[0]},${driverCoords[1]}]`,
+            destination: finalDest,
             departure_time: new Date().toISOString(),
             available_seats: ride.seatsAvailable || 4,
             cost_per_person: ride.pricePerSeatMYR || 5,

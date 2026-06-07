@@ -71,23 +71,6 @@ const features = [
   },
 ];
 
-const testimonials = [
-  {
-    logId: "COMMUTER_LOG_FTMK_098",
-    quote:
-      "Missing early morning labs is resolved. The matching engine routes me with senior student drivers going from MITC residence area to main campus daily.",
-    name: "Izzati — FTMK Student",
-    role: "Verified Passenger",
-  },
-  {
-    logId: "COMMUTER_LOG_FKM_241",
-    quote:
-      "Tuesdays at UTeM were nightmare days for FKM sector parking. Co-pooling my vehicle empty seats reduced my weekly fuel consumption by 35% easily.",
-    name: "Dr. Hafiz — FKM Lecturer",
-    role: "Verified Driver",
-  },
-];
-
 export default function LandingPage() {
   const [matchLogs, setMatchLogs] = useState<string[]>([
     "Initializing GeoMesh...",
@@ -277,25 +260,6 @@ export default function LandingPage() {
                     </div>
                   </div>
 
-                  {/* Driver Vehicle Stats */}
-                  <div className="rounded-xl border border-slate-900 bg-slate-900/20 p-4 text-xs space-y-2 relative overflow-hidden">
-                    <div className="absolute top-0 right-0 p-1 font-mono text-[7px] text-slate-600">ID: r5_mock</div>
-                    <div className="flex items-center gap-2 font-semibold text-slate-300">
-                      <Car className="h-4 w-4 text-cyan-400" />
-                      Perodua Myvi · WXY 1234
-                    </div>
-                    <p className="text-slate-400">Route Origin: SRC A lobby · ETA 12 mins</p>
-                    
-                    {/* Progress Line */}
-                    <div className="h-1.5 w-full bg-slate-900 rounded-full overflow-hidden mt-1">
-                      <motion.div
-                        className="h-full rounded-full bg-gradient-to-r from-cyan-500 to-blue-500 shadow-[0_0_8px_#06b6d4]"
-                        initial={{ width: "10%" }}
-                        animate={{ width: "82%" }}
-                        transition={{ duration: 2, ease: "easeInOut", repeat: Infinity, repeatType: "reverse" }}
-                      />
-                    </div>
-                  </div>
 
                   {/* Info block */}
                   <div className="grid grid-cols-3 gap-3 text-center text-xs">
@@ -436,43 +400,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Testimonials (Commuter Log Files) */}
-      <section id="testimonials" className="mx-auto max-w-6xl px-4 py-20 sm:px-6 lg:py-24">
-        <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between border-b border-slate-900 pb-6">
-          <div className="space-y-2">
-            <span className="text-[10px] font-mono tracking-widest text-cyan-400 block uppercase">[ VERIFIED COMMUTER LOGS ]</span>
-            <h2 className="text-3xl font-extrabold tracking-tight text-slate-100">Student & Staff Feedback</h2>
-          </div>
-          <div className="inline-flex items-center gap-2 text-xs font-mono text-slate-500">
-            <Shield className="h-4 w-4 text-cyan-500" />
-            <span>MOCK_LEDGER_FEED // STABLE</span>
-          </div>
-        </div>
-
-        <div className="mt-10 grid gap-6 lg:grid-cols-2">
-          {testimonials.map((t, i) => (
-            <motion.figure
-              key={t.name}
-              initial={{ opacity: 0, y: 15 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.1 }}
-              className="rounded-2xl border border-slate-900 bg-slate-950/40 p-6 sm:p-8 shadow-xl backdrop-blur-md hover:border-slate-800 transition-all duration-300 relative overflow-hidden"
-            >
-              <div className="absolute top-2 right-4 font-mono text-[8.5px] text-slate-600">{t.logId}</div>
-              <blockquote className="text-sm leading-relaxed text-slate-400 italic">
-                “{t.quote}”
-              </blockquote>
-              <div className="mt-6 flex items-center justify-between border-t border-slate-900/60 pt-4">
-                <figcaption className="text-xs font-bold text-slate-300">{t.name}</figcaption>
-                <span className="text-[9px] font-mono px-2 py-0.5 rounded-sm border border-slate-800/80 bg-slate-900/50 text-slate-400 uppercase">
-                  {t.role}
-                </span>
-              </div>
-            </motion.figure>
-          ))}
-        </div>
-      </section>
 
       {/* Call to Action Section */}
       <section className="border-t border-slate-900 bg-gradient-to-b from-[#080d19] to-[#040810] py-20 sm:py-24 relative overflow-hidden">

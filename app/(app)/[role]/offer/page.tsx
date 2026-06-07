@@ -114,7 +114,13 @@ export default function OfferRidePage() {
         return;
       }
 
-      const finalDestination = `${destination} [payment_method:${paymentMethod}]`;
+      let finalDestination = `${destination} [payment_method:${paymentMethod}]`;
+      if (typeof window !== "undefined") {
+        const savedQr = localStorage.getItem("campusride_driver_duitnow_qr");
+        if (savedQr && paymentMethod === "tng") {
+          finalDestination += ` [duitnow_qr:${savedQr}]`;
+        }
+      }
 
       const { error } = await supabase.from("rides").insert({
         driver_id: user.id,
@@ -304,7 +310,6 @@ export default function OfferRidePage() {
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="tng">Touch 'n Go eWallet</SelectItem>
-                  <SelectItem value="card">Debit / Credit Card (Stripe)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

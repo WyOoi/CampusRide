@@ -50,10 +50,7 @@ export function parseRideDestination(destStr: string) {
     rideState = stateMatch[1].trim();
   }
 
-  const cleanDest = destStr
-    .replace(/\[payment_method:[^\]]+\]/g, "")
-    .replace(/\[ride_state:[^\]]+\]/g, "")
-    .trim();
+  const cleanDest = destStr.replace(/\[[^\]]+\]/g, "").trim();
 
   return { destination: cleanDest, paymentMethod, rideState };
 }
@@ -251,11 +248,7 @@ export default function RequestsPage() {
                         <Wallet className="h-3 w-3" /> TNG
                       </span>
                     )}
-                    {paymentMethod === "card" && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-500 uppercase">
-                        <CreditCard className="h-3 w-3" /> Card (Stripe)
-                      </span>
-                    )}
+
                     {paymentMethod === "cash" && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase">
                         <Banknote className="h-3 w-3" /> Cash
@@ -356,11 +349,7 @@ export default function RequestsPage() {
                           <Wallet className="h-3 w-3" /> TNG eWallet
                         </span>
                       )}
-                      {paymentMethod === "card" && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-500">
-                          <CreditCard className="h-3 w-3" /> Card (Stripe)
-                        </span>
-                      )}
+
                       {paymentMethod === "cash" && (
                         <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500">
                           <Banknote className="h-3 w-3" /> Cash

@@ -287,7 +287,6 @@ export default function RequestRidePage() {
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="tng">Touch 'n Go eWallet</SelectItem>
-                  <SelectItem value="card">Debit / Credit Card (Stripe)</SelectItem>
                 </SelectContent>
               </Select>
             </div>

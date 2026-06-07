@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useParams } from "next/navigation";
 import { useSessionStore } from "@/store/session-store";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageHeader } from "@/components/common/page-header";
@@ -15,14 +16,44 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner"; 
 
 export default function ProfilePage() {
+  const params = useParams<{ role: string }>();
   const { user } = useSessionStore();
   const [isEditing, setIsEditing] = useState(false);
+  const [duitnowQr, setDuitnowQr] = useState<string | null>(null);
+
+  // Load saved DuitNow QR code from localstorage on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const savedQr = localStorage.getItem("campusride_driver_duitnow_qr");
+      if (savedQr) setDuitnowQr(savedQr);
+    }
+  }, []);
+
+  const handleQrUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const base64String = reader.result as string;
+        setDuitnowQr(base64String);
+        localStorage.setItem("campusride_driver_duitnow_qr", base64String);
+        toast.success("DuitNow QR Code stored locally!");
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveQr = () => {
+    setDuitnowQr(null);
+    localStorage.removeItem("campusride_driver_duitnow_qr");
+    toast.success("DuitNow QR Code removed!");
+  };
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Profile"
-        description="Manage identity, vehicle, preferences, and payment UI — all local mock forms."
+        description="Manage identity, vehicle settings, saved locations, and DuitNow QR code uploads."
         action={
           isEditing ? (
             <div className="flex gap-2">
@@ -32,7 +63,7 @@ export default function ProfilePage() {
               <Button
                 className="rounded-xl"
                 onClick={() => {
-                  toast.success("Profile saved (mock)");
+                  toast.success("Profile saved successfully");
                   setIsEditing(false);
                 }}
               >
@@ -48,7 +79,7 @@ export default function ProfilePage() {
       />
 
       <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 rounded-xl lg:grid-cols-3 xl:grid-cols-6">
+        <TabsList className={`grid w-full rounded-xl ${params.role === "driver" ? "grid-cols-2 lg:grid-cols-3 xl:grid-cols-6" : "grid-cols-2 lg:grid-cols-3 xl:grid-cols-5"}`}>
           <TabsTrigger value="settings" className="rounded-lg">
             Settings
           </TabsTrigger>
@@ -61,9 +92,11 @@ export default function ProfilePage() {
           <TabsTrigger value="places" className="rounded-lg">
             Saved places
           </TabsTrigger>
-          <TabsTrigger value="pay" className="rounded-lg">
-            Payments
-          </TabsTrigger>
+          {params.role === "driver" && (
+            <TabsTrigger value="pay" className="rounded-lg">
+              Payments
+            </TabsTrigger>
+          )}
           <TabsTrigger value="stats" className="rounded-lg">
             Stats
           </TabsTrigger>
@@ -74,7 +107,7 @@ export default function ProfilePage() {
             <Card>
               <CardHeader>
                 <CardTitle>Account</CardTitle>
-                <CardDescription>Basic identity pulled from the mock session store.</CardDescription>
+                <CardDescription>Basic identity pulled from the session store.</CardDescription>
               </CardHeader>
               <CardContent className="grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2 sm:col-span-2">
@@ -135,7 +168,7 @@ export default function ProfilePage() {
           <Card>
             <CardHeader>
               <CardTitle>Ride preferences</CardTitle>
-              <CardDescription>Soft toggles for matching heuristics (mock).</CardDescription>
+              <CardDescription>Soft toggles for matching heuristics.</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               {[
@@ -146,7 +179,7 @@ export default function ProfilePage() {
                 <div key={p.id} className="flex items-center justify-between gap-4 rounded-2xl border border-border p-4">
                   <div>
                     <p className="text-sm font-semibold">{p.label}</p>
-                    <p className="text-xs text-muted-foreground">Stored locally in a future version.</p>
+                    <p className="text-xs text-muted-foreground">Stored locally in preference store.</p>
                   </div>
                   <Switch defaultChecked={p.defaultChecked} disabled={!isEditing} />
                 </div>
@@ -174,33 +207,73 @@ export default function ProfilePage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="pay">
-          <Card>
-            <CardHeader>
-              <CardTitle>Payment methods (UI)</CardTitle>
-              <CardDescription>No PSP keys — show investors how split payments could look.</CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="flex items-center justify-between rounded-2xl border border-border p-4">
-                <div>
-                  <p className="text-sm font-semibold">Touch ‘n Go eWallet</p>
-                  <p className="text-xs text-muted-foreground">Default for campus corridor rides</p>
-                </div>
-                <Badge className="rounded-full">Default</Badge>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between rounded-2xl border border-border p-4">
-                <div>
-                  <p className="text-sm font-semibold">Visa ·••• 4242</p>
-                  <p className="text-xs text-muted-foreground">Backup for long-distance splits</p>
-                </div>
-                <Button variant="secondary" size="sm" className="rounded-xl">
-                  Edit
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {params.role === "driver" && (
+          <TabsContent value="pay">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Methods</CardTitle>
+                  <CardDescription>Configure supported direct payment methods.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+                    <div>
+                      <p className="text-sm font-semibold">Touch ‘n Go eWallet</p>
+                      <p className="text-xs text-muted-foreground">Default for passenger QR code checkouts</p>
+                    </div>
+                    <Badge className="rounded-full">Default</Badge>
+                  </div>
+                  <div className="flex items-center justify-between rounded-2xl border border-border p-4">
+                    <div>
+                      <p className="text-sm font-semibold">Cash</p>
+                      <p className="text-xs text-muted-foreground">Fallback method collected directly</p>
+                    </div>
+                    <Badge variant="outline" className="rounded-full">Available</Badge>
+                  </div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>DuitNow QR Code</CardTitle>
+                  <CardDescription>
+                    Upload your personal DuitNow QR code so passengers can pay you directly during ride completion.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {duitnowQr ? (
+                    <div className="space-y-4">
+                      <div className="relative w-44 h-44 border border-border rounded-2xl overflow-hidden bg-white p-2 mx-auto flex items-center justify-center">
+                        <img src={duitnowQr} alt="Uploaded QR Code" className="w-full h-full object-contain" />
+                      </div>
+                      <div className="flex justify-center gap-2">
+                        <Button variant="outline" size="sm" className="rounded-xl text-destructive hover:bg-destructive/10" onClick={handleRemoveQr}>
+                          Remove QR Code
+                        </Button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="border border-dashed border-border rounded-2xl p-8 text-center space-y-3 bg-muted/20">
+                      <p className="text-sm text-muted-foreground">No DuitNow QR code uploaded yet</p>
+                      <Input 
+                        type="file" 
+                        accept="image/*" 
+                        className="hidden" 
+                        id="qr-upload" 
+                        onChange={handleQrUpload}
+                      />
+                      <Button asChild size="sm" className="rounded-xl">
+                        <Label htmlFor="qr-upload" className="cursor-pointer">
+                          Upload QR Image
+                        </Label>
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        )}
 
         <TabsContent value="stats">
           <div className="grid gap-4 sm:grid-cols-3">

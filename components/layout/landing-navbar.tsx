@@ -11,7 +11,6 @@ import { APP_NAME } from "@/lib/constants";
 const links = [
   { href: "/#features", label: "Features" },
   { href: "/#problem", label: "Why CampusRide" },
-  { href: "/#testimonials", label: "Stories" },
 ];
 
 export function LandingNavbar() {

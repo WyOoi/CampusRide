@@ -9,10 +9,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
-import { CreditCard, Wallet, Banknote, CheckCircle, Lock, ShieldCheck, Loader2 } from "lucide-react";
+import { Wallet, Banknote, CheckCircle, Loader2 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { toast } from "sonner";
 
@@ -21,7 +19,7 @@ interface PaymentModalProps {
   onClose: () => void;
   onSuccess: () => Promise<void>;
   amount: number;
-  paymentMethod: "cash" | "tng" | "card" | string;
+  paymentMethod: "cash" | "tng" | string;
   tripInfo: {
     pickup: string;
     destination: string;
@@ -39,59 +37,35 @@ export function PaymentModal({
   role = "passenger",
 }: PaymentModalProps) {
   const [step, setStep] = useState<"form" | "processing" | "success">("form");
-  
-  // Card form state
-  const [cardNumber, setCardNumber] = useState("");
-  const [expiry, setExpiry] = useState("");
-  const [cvc, setCvc] = useState("");
-  const [cardName, setCardName] = useState("");
+  const [customQrBase64, setCustomQrBase64] = useState<string | null>(null);
 
-  // Format inputs
-  const handleCardNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 16) value = value.slice(0, 16);
-    const formatted = value.match(/.{1,4}/g)?.join(" ") || value;
-    setCardNumber(formatted);
-  };
-
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 4) value = value.slice(0, 4);
-    if (value.length > 2) {
-      value = `${value.slice(0, 2)}/${value.slice(2)}`;
+  // Parse custom DuitNow QR code if present in the destination metadata or load from local storage if driver
+  useEffect(() => {
+    if (role === "driver" && typeof window !== "undefined") {
+      const savedQr = localStorage.getItem("campusride_driver_duitnow_qr");
+      if (savedQr) {
+        setCustomQrBase64(savedQr);
+        return;
+      }
     }
-    setExpiry(value);
-  };
 
-  const handleCvcChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = e.target.value.replace(/\D/g, "").slice(0, 3);
-    setCvc(value);
-  };
+    if (tripInfo?.destination) {
+      const qrMatch = tripInfo.destination.match(/\[duitnow_qr:([^\]]+)\]/);
+      if (qrMatch) {
+        setCustomQrBase64(qrMatch[1]);
+      } else {
+        setCustomQrBase64(null);
+      }
+    } else {
+      setCustomQrBase64(null);
+    }
+  }, [tripInfo, role]);
 
   const handlePayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (paymentMethod === "card") {
-      if (cardNumber.replace(/\s/g, "").length !== 16) {
-        toast.error("Please enter a valid 16-digit card number");
-        return;
-      }
-      if (expiry.length !== 5) {
-        toast.error("Please enter a valid expiry date (MM/YY)");
-        return;
-      }
-      if (cvc.length !== 3) {
-        toast.error("Please enter a valid 3-digit CVC");
-        return;
-      }
-      if (!cardName.trim()) {
-        toast.error("Please enter the cardholder's name");
-        return;
-      }
-    }
-
     setStep("processing");
 
-    // Simulate Stripe/payment provider API latency
+    // Simulate payment processing latency
     setTimeout(async () => {
       try {
         await onSuccess();
@@ -108,19 +82,10 @@ export function PaymentModal({
   useEffect(() => {
     if (isOpen) {
       setStep("form");
-      setCardNumber("");
-      setExpiry("");
-      setCvc("");
-      setCardName("");
     }
   }, [isOpen]);
 
-  const methodLabel =
-    paymentMethod === "tng"
-      ? "Touch 'n Go eWallet"
-      : paymentMethod === "card"
-      ? "Debit / Credit Card (Stripe)"
-      : "Cash";
+  const methodLabel = paymentMethod === "tng" ? "Touch 'n Go eWallet" : "Cash";
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
@@ -131,7 +96,6 @@ export function PaymentModal({
               <>
                 {paymentMethod === "cash" && <Banknote className="h-5 w-5 text-emerald-500" />}
                 {paymentMethod === "tng" && <Wallet className="h-5 w-5 text-blue-500" />}
-                {paymentMethod === "card" && <CreditCard className="h-5 w-5 text-primary" />}
                 Payment Checkout
               </>
             )}
@@ -139,7 +103,7 @@ export function PaymentModal({
             {step === "success" && "Payment Successful"}
           </DialogTitle>
           <DialogDescription className="text-xs text-muted-foreground">
-            {tripInfo.pickup} → {tripInfo.destination} · Amount: <span className="font-semibold text-foreground">RM {amount.toFixed(2)}</span>
+            {tripInfo.pickup} → {tripInfo.destination.replace(/\[[^\]]+\]/g, "").trim()} · Amount: <span className="font-semibold text-foreground">RM {amount.toFixed(2)}</span>
           </DialogDescription>
         </DialogHeader>
 
@@ -201,40 +165,50 @@ export function PaymentModal({
                 <div className="space-y-4 text-center">
                   <p className="text-xs text-muted-foreground">
                     {role === "driver"
-                      ? "Show the QR code below to the passenger to scan and collect RM " + amount.toFixed(2) + "."
-                      : "Scan the QR code below using your Touch 'n Go eWallet to complete payment."}
+                      ? "Show the DuitNow QR code below to the passenger to scan and collect RM " + amount.toFixed(2) + "."
+                      : "Scan the DuitNow QR code below using your Touch 'n Go eWallet to complete payment."}
                   </p>
                   
-                  {/* Styled Mock TNG QR Frame */}
+                  {/* Styled Mock TNG / DuitNow QR Frame */}
                   <div className="mx-auto w-52 h-52 bg-white rounded-2xl p-4 shadow-md border border-border relative flex flex-col items-center justify-between">
                     <div className="w-full flex items-center justify-between text-[10px] font-bold text-[#0052b4] border-b border-[#0052b4]/10 pb-1">
                       <span>Touch 'n Go eWallet</span>
                       <span className="text-pink-500 font-extrabold">DuitNow</span>
                     </div>
-                    {/* Simulated SVG QR Code */}
-                    <svg className="w-36 h-36 text-slate-800" viewBox="0 0 100 100">
-                      <rect width="100" height="100" fill="none" />
-                      {/* Outer corner finders */}
-                      <path d="M 5 5 L 30 5 L 30 30 L 5 30 Z M 12 12 L 23 12 L 23 23 L 12 23 Z" fill="currentColor" />
-                      <path d="M 70 5 L 95 5 L 95 30 L 70 30 Z M 77 12 L 88 12 L 88 23 L 77 23 Z" fill="currentColor" />
-                      <path d="M 5 70 L 30 70 L 30 95 L 5 95 Z M 12 77 L 23 77 L 23 88 L 12 88 Z" fill="currentColor" />
-                      {/* Random QR patterns */}
-                      <rect x="40" y="5" width="8" height="8" fill="currentColor" />
-                      <rect x="50" y="15" width="12" height="6" fill="currentColor" />
-                      <rect x="40" y="25" width="10" height="10" fill="currentColor" />
-                      <rect x="70" y="40" width="8" height="12" fill="currentColor" />
-                      <rect x="85" y="45" width="10" height="8" fill="currentColor" />
-                      <rect x="45" y="50" width="15" height="15" fill="currentColor" />
-                      <rect x="75" y="70" width="15" height="8" fill="currentColor" />
-                      <rect x="70" y="85" width="25" height="8" fill="currentColor" />
-                      <rect x="15" y="45" width="12" height="12" fill="currentColor" />
-                      <rect x="5" y="45" width="8" height="8" fill="currentColor" />
-                      {/* Center mock logo */}
-                      <rect x="40" y="40" width="20" height="20" rx="3" fill="#0052b4" />
-                      <circle cx="50" cy="50" r="6" fill="white" />
-                    </svg>
+
+                    {customQrBase64 ? (
+                      <div className="w-36 h-36 relative flex items-center justify-center border border-dashed border-slate-200 rounded-lg overflow-hidden bg-slate-50">
+                        {/* Driver's custom uploaded QR Code */}
+                        <img 
+                          src={customQrBase64} 
+                          alt="Driver DuitNow QR" 
+                          className="w-full h-full object-contain"
+                        />
+                      </div>
+                    ) : (
+                      /* Simulated SVG QR Code fallback */
+                      <svg className="w-36 h-36 text-slate-800" viewBox="0 0 100 100">
+                        <rect width="100" height="100" fill="none" />
+                        <path d="M 5 5 L 30 5 L 30 30 L 5 30 Z M 12 12 L 23 12 L 23 23 L 12 23 Z" fill="currentColor" />
+                        <path d="M 70 5 L 95 5 L 95 30 L 70 30 Z M 77 12 L 88 12 L 88 23 L 77 23 Z" fill="currentColor" />
+                        <path d="M 5 70 L 30 70 L 30 95 L 5 95 Z M 12 77 L 23 77 L 23 88 L 12 88 Z" fill="currentColor" />
+                        <rect x="40" y="5" width="8" height="8" fill="currentColor" />
+                        <rect x="50" y="15" width="12" height="6" fill="currentColor" />
+                        <rect x="40" y="25" width="10" height="10" fill="currentColor" />
+                        <rect x="70" y="40" width="8" height="12" fill="currentColor" />
+                        <rect x="85" y="45" width="10" height="8" fill="currentColor" />
+                        <rect x="45" y="50" width="15" height="15" fill="currentColor" />
+                        <rect x="75" y="70" width="15" height="8" fill="currentColor" />
+                        <rect x="70" y="85" width="25" height="8" fill="currentColor" />
+                        <rect x="15" y="45" width="12" height="12" fill="currentColor" />
+                        <rect x="5" y="45" width="8" height="8" fill="currentColor" />
+                        <rect x="40" y="40" width="20" height="20" rx="3" fill="#0052b4" />
+                        <circle cx="50" cy="50" r="6" fill="white" />
+                      </svg>
+                    )}
+
                     <div className="text-[10px] font-semibold text-muted-foreground mt-1">
-                      CampusRide Pay ID: CR-{Math.floor(1000 + Math.random() * 9000)}
+                      {customQrBase64 ? "Driver's Custom QR Code" : `CampusRide Pay ID: CR-${Math.floor(1000 + Math.random() * 9000)}`}
                     </div>
                   </div>
 
@@ -249,109 +223,6 @@ export function PaymentModal({
                   
                   <Button type="submit" className="w-full rounded-xl py-5 font-semibold bg-[#0052b4] hover:bg-[#003c85] text-white">
                     {role === "driver" ? "Confirm QR Code Paid & Complete Ride" : "Confirm QR Code Scanned"}
-                  </Button>
-                </div>
-              )}
-
-              {/* Stripe Credit Card Form UI */}
-              {paymentMethod === "card" && (
-                <div className="space-y-4">
-                  {/* Premium Credit Card Live Mockup */}
-                  <div className="relative w-full h-44 rounded-2xl bg-gradient-to-br from-slate-900 to-slate-800 text-white p-5 flex flex-col justify-between shadow-xl border border-white/5 overflow-hidden">
-                    <div className="absolute top-0 right-0 w-36 h-36 bg-primary/10 rounded-full blur-2xl" />
-                    <div className="flex items-center justify-between">
-                      <div className="flex flex-col">
-                        <span className="text-[9px] uppercase tracking-widest text-muted-foreground">CampusRide Card</span>
-                        <div className="h-6 w-8 bg-amber-500/80 rounded-md mt-1.5 flex items-center justify-center text-[10px] font-bold text-amber-900">CHIP</div>
-                      </div>
-                      <CreditCard className="h-6 w-6 opacity-75 text-primary" />
-                    </div>
-                    
-                    <div className="space-y-1 mt-2">
-                      <p className="font-mono text-base tracking-widest leading-none">
-                        {cardNumber || "•••• •••• •••• ••••"}
-                      </p>
-                    </div>
-
-                    <div className="flex justify-between items-end">
-                      <div className="flex flex-col min-w-0">
-                        <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Card Holder</span>
-                        <p className="text-xs font-semibold uppercase truncate tracking-wide max-w-[160px]">
-                          {cardName || "Your Name"}
-                        </p>
-                      </div>
-                      <div className="flex flex-col text-right">
-                        <span className="text-[8px] uppercase tracking-wider text-muted-foreground">Expires</span>
-                        <p className="text-xs font-mono font-semibold">
-                          {expiry || "MM/YY"}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Form inputs structured like Stripe Checkout */}
-                  <div className="space-y-3">
-                    <div className="space-y-1">
-                      <Label htmlFor="card-name" className="text-xs font-medium text-muted-foreground">Cardholder Name</Label>
-                      <Input
-                        id="card-name"
-                        placeholder="e.g. John Doe"
-                        value={cardName}
-                        onChange={(e) => setCardName(e.target.value)}
-                        className="rounded-xl border-border bg-card/50 text-sm"
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      <Label htmlFor="card-number" className="text-xs font-medium text-muted-foreground">Card Number</Label>
-                      <div className="relative">
-                        <Input
-                          id="card-number"
-                          placeholder="0000 0000 0000 0000"
-                          value={cardNumber}
-                          onChange={handleCardNumberChange}
-                          className="rounded-xl border-border bg-card/50 pl-10 text-sm font-mono"
-                        />
-                        <CreditCard className="absolute left-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-3">
-                      <div className="space-y-1">
-                        <Label htmlFor="card-expiry" className="text-xs font-medium text-muted-foreground">Expiry Date</Label>
-                        <Input
-                          id="card-expiry"
-                          placeholder="MM/YY"
-                          value={expiry}
-                          onChange={handleExpiryChange}
-                          className="rounded-xl border-border bg-card/50 text-sm font-mono text-center"
-                        />
-                      </div>
-                      <div className="space-y-1">
-                        <Label htmlFor="card-cvc" className="text-xs font-medium text-muted-foreground">CVC / CVV</Label>
-                        <Input
-                          id="card-cvc"
-                          placeholder="123"
-                          value={cvc}
-                          onChange={handleCvcChange}
-                          className="rounded-xl border-border bg-card/50 text-sm font-mono text-center"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 justify-center text-[10px] text-muted-foreground">
-                    <Lock className="h-3 w-3 text-emerald-500" />
-                    <span>Secure payment processed via Stripe SSL encryption</span>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    className={`w-full rounded-xl py-5 font-semibold text-sm ${
-                      role === "driver" ? "bg-indigo-600 hover:bg-indigo-700 text-white" : ""
-                    }`}
-                  >
-                    {role === "driver" ? "Confirm Completion & Charge Card" : `Pay RM ${amount.toFixed(2)}`}
                   </Button>
                 </div>
               )}
@@ -402,7 +273,7 @@ export function PaymentModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Reference ID:</span>
-                  <span className="text-foreground">tx_stripe_{Math.random().toString(36).substr(2, 9)}</span>
+                  <span className="text-foreground">tx_qr_{Math.random().toString(36).substr(2, 9)}</span>
                 </div>
               </div>
               <Button onClick={onClose} className="w-full rounded-xl">
