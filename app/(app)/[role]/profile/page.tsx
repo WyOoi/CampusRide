@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [duitnowQr, setDuitnowQr] = useState<string | null>(null);
+  const [defaultPayment, setDefaultPayment] = useState("tng");
 
   // Load saved DuitNow QR code from localstorage on mount
   useEffect(() => {
@@ -110,11 +111,9 @@ export default function ProfilePage() {
           <TabsTrigger value="places" className="w-full justify-start px-4 py-2.5 text-left rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-colors">
             Saved places
           </TabsTrigger>
-          {params.role === "driver" && (
-            <TabsTrigger value="pay" className="w-full justify-start px-4 py-2.5 text-left rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-colors">
-              Payments
-            </TabsTrigger>
-          )}
+          <TabsTrigger value="pay" className="w-full justify-start px-4 py-2.5 text-left rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-colors">
+            Payments
+          </TabsTrigger>
           <TabsTrigger value="stats" className="w-full justify-start px-4 py-2.5 text-left rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-colors">
             Stats
           </TabsTrigger>
@@ -209,7 +208,10 @@ export default function ProfilePage() {
                         <p className="text-sm font-semibold">{p.label}</p>
                         <p className="text-xs text-muted-foreground">Stored locally in preference store.</p>
                       </div>
-                      <Switch defaultChecked={p.defaultChecked} disabled={!isEditing} onCheckedChange={handleInputChange} />
+                      <Switch defaultChecked={p.defaultChecked} onCheckedChange={(checked) => {
+                        handleInputChange();
+                        toast.success(`Preference updated`);
+                      }} />
                     </div>
                   ))}
                 </CardContent>
@@ -238,32 +240,52 @@ export default function ProfilePage() {
             </Card>
           </TabsContent>
 
-          {params.role === "driver" && (
-            <TabsContent value="pay" className="mt-0">
-              <div className="space-y-6">
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Payment Methods</CardTitle>
-                    <CardDescription>Configure supported direct payment methods.</CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    <div className="flex items-center justify-between rounded-2xl border border-border p-4">
-                      <div>
-                        <p className="text-sm font-semibold">Touch ‘n Go eWallet</p>
-                        <p className="text-xs text-muted-foreground">Default for passenger QR code checkouts</p>
-                      </div>
-                      <Badge className="rounded-full">Default</Badge>
+          <TabsContent value="pay" className="mt-0">
+            <div className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle>Payment Methods</CardTitle>
+                  <CardDescription>Configure supported direct payment methods.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div 
+                    className="flex items-center justify-between rounded-2xl border border-border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setDefaultPayment("tng");
+                      toast.success("Default payment method set to Touch 'n Go eWallet");
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">Touch ‘n Go eWallet</p>
+                      <p className="text-xs text-muted-foreground">Default for passenger QR code checkouts</p>
                     </div>
-                    <div className="flex items-center justify-between rounded-2xl border border-border p-4">
-                      <div>
-                        <p className="text-sm font-semibold">Cash</p>
-                        <p className="text-xs text-muted-foreground">Fallback method collected directly</p>
-                      </div>
+                    {defaultPayment === "tng" ? (
+                      <Badge className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Default</Badge>
+                    ) : (
                       <Badge variant="outline" className="rounded-full">Available</Badge>
+                    )}
+                  </div>
+                  <div 
+                    className="flex items-center justify-between rounded-2xl border border-border p-4 cursor-pointer hover:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      setDefaultPayment("cash");
+                      toast.success("Default payment method set to Cash");
+                    }}
+                  >
+                    <div>
+                      <p className="text-sm font-semibold">Cash</p>
+                      <p className="text-xs text-muted-foreground">Fallback method collected directly</p>
                     </div>
-                  </CardContent>
-                </Card>
+                    {defaultPayment === "cash" ? (
+                      <Badge className="rounded-full bg-primary text-primary-foreground hover:bg-primary/90">Default</Badge>
+                    ) : (
+                      <Badge variant="outline" className="rounded-full">Available</Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
 
+              {params.role === "driver" && (
                 <Card>
                   <CardHeader>
                     <CardTitle>DuitNow QR Code</CardTitle>
@@ -302,9 +324,9 @@ export default function ProfilePage() {
                     )}
                   </CardContent>
                 </Card>
-              </div>
-            </TabsContent>
-          )}
+              )}
+            </div>
+          </TabsContent>
 
           <TabsContent value="stats" className="mt-0">
             <div className="grid gap-4 sm:grid-cols-3">

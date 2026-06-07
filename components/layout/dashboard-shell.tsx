@@ -181,7 +181,7 @@ useEffect(() => {
             const active = pathname === href || (item.href !== "" && pathname.startsWith(`${href}/`));
             const Icon = item.icon;
             const label = item.href === "/requests"
-              ? (role === "driver" ? "Find Requests" : "My Requests")
+              ? (role === "driver" ? "Find Request" : "My Requests")
               : item.label;
             return (
               <Link
@@ -294,26 +294,26 @@ const primary = nav.filter((n) => {
           const active = pathname === href || (item.href !== "" && pathname.startsWith(`${href}/`));
           const Icon = item.icon;
           const label = item.href === "/requests"
-            ? (role === "driver" ? "Find Requests" : "My Requests")
+            ? (role === "driver" ? "Find Request" : "My Requests")
             : item.label;
           return (
             <Link
               key={item.href}
               href={href}
               className={cn(
-                "flex min-w-[64px] flex-1 flex-col items-center gap-1 rounded-xl px-2 py-2 text-[11px] font-medium",
+                "flex min-w-[64px] flex-1 flex-col items-center gap-1 rounded-xl px-1 py-2 text-[11px] font-medium text-center leading-tight",
                 active ? "text-primary" : "text-muted-foreground",
               )}
             >
               <span
                 className={cn(
-                  "grid h-9 w-9 place-items-center rounded-2xl border",
+                  "grid h-9 w-9 shrink-0 place-items-center rounded-2xl border",
                   active ? "border-primary/30 bg-primary/10" : "border-transparent bg-muted/40",
                 )}
               >
                 <Icon className="h-4 w-4" />
               </span>
-              {label}
+              <span className="w-full text-center">{label}</span>
             </Link>
           );
         })}

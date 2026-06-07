@@ -1,10 +1,8 @@
 "use client";
 
 import { PageHeader } from "@/components/common/page-header";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
 import { useEffect, useState } from "react";
 import { supabase } from "@/lib/supabase";
 import { formatRelative } from "@/utils/format";
@@ -103,112 +101,32 @@ console.log("COUNT:", alerts.length);
         description="Ride alerts, booking confirmations, and a lightweight activity feed."
       />
 
-      <Tabs defaultValue="all" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-2 rounded-xl sm:grid-cols-4">
-          <TabsTrigger value="all" className="rounded-lg">
-            All
-          </TabsTrigger>
-          <TabsTrigger value="alerts" className="rounded-lg">
-            Ride alerts
-          </TabsTrigger>
-          <TabsTrigger value="bookings" className="rounded-lg">
-            Bookings
-          </TabsTrigger>
-          <TabsTrigger value="feed" className="rounded-lg">
-            Activity
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="all">
-          <Card>
-            <CardContent className="divide-y divide-border p-0">
-              {alerts.length === 0 ? (
-  <div className="p-6 text-center text-muted-foreground">
-    No notifications yet.
-  </div>
-) : (
-  alerts.map((n) => (
-                <div key={n.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between">
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2">
-                      <p className="font-semibold">{n.title}</p>
-                      {!n.is_read ? (
-                        <Badge className="rounded-full" variant="default">
-                          New
-                        </Badge>
-                      ) : null}
-
-                    </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{n.message}</p>
+      <Card>
+        <CardContent className="divide-y divide-border p-0">
+          {alerts.length === 0 ? (
+            <div className="p-6 text-center text-muted-foreground">
+              No notifications yet.
+            </div>
+          ) : (
+            alerts.map((n) => (
+              <div key={n.id} className="flex flex-col gap-2 p-4 sm:flex-row sm:items-center sm:justify-between hover:bg-muted/30 transition-colors">
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="font-semibold">{n.title}</p>
+                    {!n.is_read ? (
+                      <Badge className="rounded-full" variant="default">
+                        New
+                      </Badge>
+                    ) : null}
                   </div>
-                  <p className="text-xs text-muted-foreground">{formatRelative(n.created_at)}</p>
-                </div>
-              )))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="alerts">
-          <Card>
-            <CardContent className="space-y-4 p-4">
-              {alerts.length === 0 ? (
-  <div className="p-6 text-center text-muted-foreground">
-    No notifications yet.
-  </div>
-) : (
-  alerts.map((n) => (
-                <div key={n.id} className="rounded-2xl border border-border bg-muted/20 p-4">
-                  <p className="font-semibold">{n.title}</p>
                   <p className="mt-1 text-sm text-muted-foreground">{n.message}</p>
                 </div>
-              )))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="bookings">
-          <Card>
-            <CardContent className="space-y-4 p-4">
-              {alerts.length === 0 ? (
-  <div className="p-6 text-center text-muted-foreground">
-    No notifications yet.
-  </div>
-) : (
-  alerts.map((n) => (
-                <div key={n.id} className="rounded-2xl border border-border p-4">
-                  <p className="font-semibold">{n.title}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">{n.message}</p>
-                </div>
-              )))}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="feed">
-          <Card>
-            <CardContent className="space-y-4 p-4">
-              {alerts.length === 0 ? (
-  <div className="p-6 text-center text-muted-foreground">
-    No notifications yet.
-  </div>
-) : (
-  alerts.map((n) => (
-                <div key={n.id}>
-                  <div className="flex items-start justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{n.title}</p>
-                      <p className="mt-1 text-sm text-muted-foreground">{n.message}</p>
-                    </div>
-                    <span className="text-xs text-muted-foreground">{formatRelative(n.created_at)}</span>
-                  </div>
-                  <Separator className="mt-4" />
-                </div>
-              )))}
-
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                <p className="text-xs text-muted-foreground sm:whitespace-nowrap">{formatRelative(n.created_at)}</p>
+              </div>
+            ))
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 }
