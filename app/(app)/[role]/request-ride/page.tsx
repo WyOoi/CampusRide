@@ -58,7 +58,10 @@ export default function RequestRidePage() {
         .limit(1);
         
       if (activeBookings && activeBookings.length > 0) {
-        const isCompleted = activeBookings[0].rides?.status === "completed" || activeBookings[0].rides?.status === "closed";
+        const rides: any = activeBookings[0].rides;
+        const isCompleted = Array.isArray(rides) 
+          ? rides.some((r: any) => r.status === "completed" || r.status === "closed")
+          : rides?.status === "completed" || rides?.status === "closed";
         if (!isCompleted) {
             toast.info("You already have an active booking.");
             router.push(`/${params.role}/orders`);
