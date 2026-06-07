@@ -250,7 +250,7 @@ export default function RequestsPage() {
                     )}
 
                     {paymentMethod === "cash" && (
-                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase">
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500 uppercase">
                         <Banknote className="h-3 w-3" /> Cash
                       </span>
                     )}
@@ -351,7 +351,7 @@ export default function RequestsPage() {
                       )}
 
                       {paymentMethod === "cash" && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500">
                           <Banknote className="h-3 w-3" /> Cash
                         </span>
                       )}
@@ -374,7 +374,7 @@ export default function RequestsPage() {
                 </div>
 
                 <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground flex gap-2 items-start">
-                  <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <ShieldCheck className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
                   <div>
                     <span className="font-semibold text-foreground">Verified Student Ride</span>
                     <p className="mt-0.5">Passenger is a verified student of UTeM. Accept the ride to connect with them directly.</p>

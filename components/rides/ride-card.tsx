@@ -110,7 +110,7 @@ export function RideCard({ ride, href }: { ride: MockRide; href?: string }) {
                   <Button
                     type="button"
                     disabled
-                    className="w-full rounded-xl bg-emerald-600 text-white disabled:opacity-100 flex items-center justify-center gap-1.5 shadow-sm font-semibold border-none"
+                    className="w-full rounded-xl bg-blue-600 text-white disabled:opacity-100 flex items-center justify-center gap-1.5 shadow-sm font-semibold border-none"
                   >
                     <Check className="h-4 w-4" />
                     Joined

@@ -24,7 +24,7 @@ const nav = [
   { href: "/offer", label: "Offer Ride", icon: CarFront },
   { href: "/request-ride", label: "Request Ride", icon: Search },
   { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/notifications", label: "Alerts", icon: Bell },
+
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 

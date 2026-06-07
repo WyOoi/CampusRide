@@ -100,7 +100,7 @@ console.log("COUNT:", alerts.length);
       <PageHeader
       
         title="Notification center"
-        description="Ride alerts, booking confirmations, and a lightweight activity feed — static JSON for now."
+        description="Ride alerts, booking confirmations, and a lightweight activity feed."
       />
 
       <Tabs defaultValue="all" className="space-y-6">
@@ -204,9 +204,7 @@ console.log("COUNT:", alerts.length);
                   <Separator className="mt-4" />
                 </div>
               )))}
-              <div className="rounded-2xl border border-dashed border-border bg-muted/10 p-4 text-sm text-muted-foreground">
-                Real-time feed would subscribe to a WebSocket channel — here it’s a polished placeholder for demos.
-              </div>
+
             </CardContent>
           </Card>
         </TabsContent>

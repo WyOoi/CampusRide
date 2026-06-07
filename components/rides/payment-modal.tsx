@@ -94,7 +94,7 @@ export function PaymentModal({
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             {step === "form" && (
               <>
-                {paymentMethod === "cash" && <Banknote className="h-5 w-5 text-emerald-500" />}
+                {paymentMethod === "cash" && <Banknote className="h-5 w-5 text-blue-500" />}
                 {paymentMethod === "tng" && <Wallet className="h-5 w-5 text-blue-500" />}
                 Payment Checkout
               </>
@@ -123,7 +123,7 @@ export function PaymentModal({
               {paymentMethod === "cash" && (
                 role === "driver" ? (
                   <div className="space-y-4 py-2 text-center">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                       <Banknote className="h-8 w-8" />
                     </div>
                     <div className="space-y-2">
@@ -141,7 +141,7 @@ export function PaymentModal({
                   </div>
                 ) : (
                   <div className="space-y-4 py-2 text-center">
-                    <div className="mx-auto w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+                    <div className="mx-auto w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                       <Banknote className="h-8 w-8" />
                     </div>
                     <div className="space-y-2">
@@ -253,7 +253,7 @@ export function PaymentModal({
               exit={{ opacity: 0 }}
               className="flex flex-col items-center justify-center py-8 text-center space-y-4"
             >
-              <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500">
+              <div className="w-16 h-16 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                 <CheckCircle className="h-10 w-10 animate-bounce" />
               </div>
               <div className="space-y-1">
@@ -269,7 +269,7 @@ export function PaymentModal({
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Status:</span>
-                  <span className="text-emerald-500 font-semibold">PAID</span>
+                  <span className="text-blue-500 font-semibold">PAID</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-muted-foreground">Reference ID:</span>

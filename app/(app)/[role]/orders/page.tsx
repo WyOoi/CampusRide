@@ -618,7 +618,7 @@ export default function OrdersPage() {
         );
       default:
         return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
+          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
             <Banknote className="h-3 w-3" /> Cash
           </span>
         );
@@ -849,7 +849,7 @@ export default function OrdersPage() {
                                   Waiting for Driver
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
+                                <span className="inline-flex items-center rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
                                   Driver Assigned
                                 </span>
                               )}
@@ -908,7 +908,7 @@ export default function OrdersPage() {
                               <p className="flex items-center gap-2 pt-1">
                                 Status:{" "}
                                 {booking.booking_status === "completed" ? (
-                                  <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+                                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
                                     Completed
                                   </span>
                                 ) : (
@@ -952,7 +952,7 @@ export default function OrdersPage() {
                               <p className="flex items-center gap-2 pt-1">
                                 Status:{" "}
                                 {request.status === "completed" ? (
-                                  <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+                                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
                                     Completed
                                   </span>
                                 ) : (
@@ -1020,7 +1020,7 @@ export default function OrdersPage() {
                           </Button>
                           <Button
                             onClick={() => triggerCompleteRide(ride)}
-                            className="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs gap-1.5 shadow-sm"
+                            className="flex-1 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs gap-1.5 shadow-sm"
                           >
                             <CheckCircle className="h-3.5 w-3.5" /> Complete Ride
                           </Button>
@@ -1059,7 +1059,7 @@ export default function OrdersPage() {
                           </Button>
                           <Button
                             onClick={() => triggerCompleteRequestRide(request)}
-                            className="flex-1 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white font-semibold text-xs gap-1.5 shadow-sm"
+                            className="flex-1 rounded-xl bg-blue-500 hover:bg-blue-600 text-white font-semibold text-xs gap-1.5 shadow-sm"
                           >
                             <CheckCircle className="h-3.5 w-3.5" /> Complete Ride
                           </Button>
@@ -1203,7 +1203,7 @@ export default function OrdersPage() {
                               </div>
                               <p className="flex items-center gap-2 pt-1">
                                 Status:{" "}
-                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ride.status === 'completed' || ride.status === 'closed' ? 'bg-green-500/10 text-green-400' : 'bg-gray-500/10 text-gray-400'}`}>
+                                <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${ride.status === 'completed' || ride.status === 'closed' ? 'bg-blue-500/10 text-blue-400' : 'bg-gray-500/10 text-gray-400'}`}>
                                   {ride.status === "completed" || ride.status === "closed" ? "Completed Offer" : "Closed Offer"}
                                 </span>
                               </p>
@@ -1239,7 +1239,7 @@ export default function OrdersPage() {
                               <p className="flex items-center gap-2 pt-1">
                                 Status:{" "}
                                 {request.status === "completed" ? (
-                                  <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
+                                  <span className="inline-flex items-center rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-medium text-blue-400">
                                     Completed
                                   </span>
                                 ) : (

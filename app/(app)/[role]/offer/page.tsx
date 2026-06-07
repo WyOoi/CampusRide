@@ -14,6 +14,7 @@ import { LocationSearch } from "@/components/maps/location-search";
 import { motion } from "framer-motion";
 import { ChevronUp, ChevronDown, Navigation, CarFront } from "lucide-react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useRouter, useParams } from "next/navigation";
 
 export default function OfferRidePage() {
   const [seats, setSeats] = useState(3);
@@ -27,6 +28,30 @@ export default function OfferRidePage() {
   const [distanceKm, setDistanceKm] = useState(12.4);
   const [isExpanded, setIsExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+
+  const router = useRouter();
+  const params = useParams<{ role: string }>();
+
+  // Check for active rides
+  useEffect(() => {
+    const checkActiveRide = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { data: activeRides } = await supabase
+        .from("rides")
+        .select("id")
+        .eq("driver_id", user.id)
+        .eq("status", "active")
+        .limit(1);
+
+      if (activeRides && activeRides.length > 0) {
+        toast.info("You already have an active ride.");
+        router.push(`/${params.role}/orders`);
+      }
+    };
+    checkActiveRide();
+  }, [router, params.role]);
 
   // Automatically calculate suggested cost per seat based on the real road distance
   const suggestedCost = useMemo(() => {
@@ -136,15 +161,7 @@ export default function OfferRidePage() {
 
       toast.success("Ride published successfully");
 
-      setPickupLocation("");
-      setDestination("");
-      setPickupCoords(null);
-      setDestinationCoords(null);
-      setDepartureTime("");
-      setSeats(3);
-      setCostPerPerson(5);
-      setPaymentMethod("cash");
-      setIsExpanded(false);
+      router.push(`/${params.role}/orders`);
     } catch (error) {
       const err = error as Error;
       toast.error(err.message);

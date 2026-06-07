@@ -31,7 +31,7 @@ import { Badge } from "@/components/ui/badge";
 import { APP_NAME, UNIVERSITY } from "@/lib/constants";
 
 const stats = [
-  { label: "VERIFIED ACTIVE ACCOUNTS", value: "1,248 Users", hint: "Validated UTeM directories", icon: Users, color: "text-emerald-500" },
+  { label: "VERIFIED ACTIVE ACCOUNTS", value: "1,248 Users", hint: "Validated UTeM directories", icon: Users, color: "text-blue-500" },
   { label: "ROUTING COMPILATION SPEED", value: "6.2 Sec", hint: "OSRM pathfinding latency", icon: Cpu, color: "text-cyan-500" },
   { label: "AVERAGE VALUE SHARE", value: "RM4.50 Trip", hint: "Direct student-to-driver split", icon: Wallet, color: "text-violet-500" },
 ];
@@ -50,8 +50,8 @@ const features = [
     body: "Combines high-performance OpenStreetMap and OSRM coordinate servers to calculate precise, toll-aware routes, connecting drivers and passengers instantly.",
     icon: Network,
     badge: "OSRM ENGINE",
-    color: "from-emerald-500/20 to-teal-500/20",
-    iconColor: "text-emerald-400",
+    color: "from-blue-500/20 to-teal-500/20",
+    iconColor: "text-blue-400",
   },
   {
     title: "0% Platform Commissions",
@@ -129,7 +129,7 @@ export default function LandingPage() {
       {/* Glowing Neon Ambient Lights */}
       <div className="absolute top-1/4 left-1/4 -translate-x-1/2 -translate-y-1/2 w-[35rem] h-[35rem] rounded-full bg-cyan-500/10 blur-[120px] pointer-events-none animate-pulse [animation-duration:10s]" />
       <div className="absolute top-1/3 right-1/4 translate-x-1/2 w-[30rem] h-[30rem] rounded-full bg-violet-600/10 blur-[100px] pointer-events-none animate-pulse [animation-duration:8s]" />
-      <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-emerald-500/5 blur-[150px] pointer-events-none" />
+      <div className="absolute bottom-1/4 left-1/2 -translate-x-1/2 w-[40rem] h-[40rem] rounded-full bg-blue-500/5 blur-[150px] pointer-events-none" />
 
       {/* Hero Section */}
       <section className="relative pt-20 pb-16 sm:pt-28 sm:pb-24 max-w-6xl mx-auto px-4 sm:px-6">
@@ -211,8 +211,8 @@ export default function LandingPage() {
                       <span className="text-[9px] font-mono tracking-widest text-cyan-400 block uppercase">OSRM PATHFINDER</span>
                       <h3 className="text-base font-bold text-slate-200">Melaka Sentral Node</h3>
                     </div>
-                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-emerald-500/10 border border-emerald-500/20 text-[10px] font-mono font-semibold text-emerald-400">
-                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                    <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono font-semibold text-blue-400">
+                      <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
                       ROUTING_ACTIVE
                     </div>
                   </div>
@@ -239,12 +239,12 @@ export default function LandingPage() {
 
                     {/* Peer Nodes */}
                     <motion.div 
-                      className="absolute top-1/4 left-1/3 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+                      className="absolute top-1/4 left-1/3 w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
                       animate={{ y: [0, -3, 0] }}
                       transition={{ repeat: Infinity, duration: 2.2, ease: "easeInOut" }}
                     />
                     <motion.div 
-                      className="absolute bottom-1/3 right-1/4 w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
+                      className="absolute bottom-1/3 right-1/4 w-2 h-2 rounded-full bg-blue-400 shadow-[0_0_10px_rgba(52,211,153,0.8)]"
                       animate={{ y: [0, 2, 0] }}
                       transition={{ repeat: Infinity, duration: 2.7, ease: "easeInOut" }}
                     />
@@ -329,7 +329,7 @@ export default function LandingPage() {
             {[
               { title: "Shuttle Capacity Surge", body: "Technology and Main campus bus corridors bottleneck heavily during exam weeks, causing long student queues.", icon: Sparkles, color: "border-cyan-500/20 text-cyan-400" },
               { title: "Centralized Commission Cut", body: "Commercial ride-hailing networks deduct 20% to 30% from driver earnings. We implement 0% platform cuts.", icon: Wallet, color: "border-violet-500/20 text-violet-400" },
-              { title: "Campus Carbon Footprint", body: "High single-occupancy vehicle flow raises campus emission counts. Shared empty seats relieve parking lot congestion.", icon: Leaf, color: "border-emerald-500/20 text-emerald-400" },
+              { title: "Campus Carbon Footprint", body: "High single-occupancy vehicle flow raises campus emission counts. Shared empty seats relieve parking lot congestion.", icon: Leaf, color: "border-blue-500/20 text-blue-400" },
             ].map((p, i) => {
               const Icon = p.icon;
               return (

@@ -2,7 +2,7 @@
 
 import { useMemo, useState, useEffect } from "react";
 import { supabase } from "@/lib/supabase";
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner"; 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,10 +29,44 @@ export default function RequestRidePage() {
   const [paymentMethod, setPaymentMethod] = useState("cash");
 
   const router = useRouter();
+  const params = useParams<{ role: string }>();
 
+  // Check for active requests or bookings
+  useEffect(() => {
+    const checkActiveRequests = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
 
+      const { data: activeReqs } = await supabase
+        .from("ride_requests")
+        .select("id")
+        .eq("passenger_id", user.id)
+        .in("status", ["open", "accepted"])
+        .limit(1);
 
-  // Helper for reverse geocoding
+      if (activeReqs && activeReqs.length > 0) {
+        toast.info("You already have an active ride request.");
+        router.push(`/${params.role}/orders`);
+        return;
+      }
+      
+      const { data: activeBookings } = await supabase
+        .from("bookings")
+        .select("id, rides(status)")
+        .eq("passenger_id", user.id)
+        .in("booking_status", ["pending", "confirmed"])
+        .limit(1);
+        
+      if (activeBookings && activeBookings.length > 0) {
+        const isCompleted = activeBookings[0].rides?.status === "completed" || activeBookings[0].rides?.status === "closed";
+        if (!isCompleted) {
+            toast.info("You already have an active booking.");
+            router.push(`/${params.role}/orders`);
+        }
+      }
+    };
+    checkActiveRequests();
+  }, [router, params.role]);  // Helper for reverse geocoding
   const reverseGeocode = async (lat: number, lon: number): Promise<string> => {
     try {
       const response = await fetch(
@@ -133,7 +167,7 @@ export default function RequestRidePage() {
       if (error) throw error;
       toast.success("Ride request submitted");
 
-      window.location.href = "/orders";
+      router.push(`/${params.role}/orders`);
     } catch (error) {
       const err = error as Error;
       console.error(err);
