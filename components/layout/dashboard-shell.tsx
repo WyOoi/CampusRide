@@ -394,7 +394,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
       {!isFullScreenMapPage && <AppSidebar />}
       <div className={cn("flex min-w-0 flex-1 flex-col", !isFullScreenMapPage && "pb-24 md:pb-0")}>
         <main className={cn(
-          isFullScreenMapPage ? "m-0 p-0 h-[calc(100vh-76px)] w-full overflow-hidden relative" : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6"
+          isFullScreenMapPage ? "m-0 p-0 h-[calc(100dvh-76px)] w-full overflow-hidden relative" : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6"
         )}>
           {children}
         </main>

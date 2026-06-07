@@ -172,7 +172,7 @@ export default function OfferRidePage() {
   };
 
   return (
-    <div className="relative w-full h-full min-h-[calc(100vh-76px)] overflow-hidden">
+    <div className="relative w-full h-full min-h-[calc(100dvh-76px)] overflow-hidden">
       {/* Background Fullscreen Map */}
       <div className="absolute inset-0 w-full h-full z-0">
         {pickupCoords && destinationCoords ? (
@@ -202,8 +202,8 @@ export default function OfferRidePage() {
 
       {/* Slide up/down panel */}
       <motion.div
-        initial={{ height: "76px" }}
-        animate={{ height: isExpanded ? "min(540px, 70vh)" : "76px" }}
+        initial={{ height: "100px" }}
+        animate={{ height: isExpanded ? "min(680px, 85dvh)" : "100px" }}
         transition={{ type: "spring", damping: 25, stiffness: 120 }}
         className="absolute bottom-4 left-4 right-4 z-30 bg-card text-card-foreground border border-border shadow-2xl rounded-2xl overflow-hidden max-w-xl mx-auto flex flex-col"
       >
