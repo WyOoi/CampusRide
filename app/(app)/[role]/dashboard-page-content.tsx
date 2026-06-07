@@ -5,25 +5,20 @@ import { motion } from "framer-motion";
 import {
   CarFront,
   ClipboardList,
-  Leaf,
   Plus,
   Search,
   Sparkles,
-  Timer,
   LogOut,
 } from "lucide-react";
 import { useSessionStore } from "@/store/session-store";
-import { useRidesStore } from "@/store/rides-store";
 import { mockNotifications } from "@/data/mock-notifications";
 import { PageHeader } from "@/components/common/page-header";
-import { StatCard } from "@/components/common/stat-card";
 import { MotionCard } from "@/components/common/motion-card";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { RideCard } from "@/components/rides/ride-card";
 import { formatRelative } from "@/utils/format";
 import type { UserRole } from "@/types";
 import { useEffect, useState } from "react";
@@ -34,13 +29,6 @@ import { useRouter } from "next/navigation";
 
 export default function DashboardPage() {
   const { activeRole, setActiveRole } = useSessionStore();
-  const { rides, initializeStore } = useRidesStore();
-
-  useEffect(() => {
-    initializeStore();
-  }, [initializeStore]);
-
-  const upcoming = rides.filter((r) => r.status !== "Completed").slice(0, 3);
   const recentNotes = mockNotifications.slice(0, 4);
   const router = useRouter();
 const handleLogout = async () => {
@@ -180,74 +168,51 @@ setRole(
         </MotionCard>
       )}
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="Upcoming rides" value={`${upcoming.length}`} hint="Next 72 hours (mock)" icon={CarFront} />
-        <StatCard label="Trust score" value="98" hint="Based on completed trips" icon={Sparkles} />
-        <StatCard label="CO₂ saved (est.)" value="6.4 kg" hint="Shared vs solo trips" icon={Leaf} />
-        <StatCard label="Avg. match" value="6 min" hint="Around peak SRC hours" icon={Timer} />
-      </div>
-
-      <div className="grid gap-6 lg:grid-cols-3">
-        <Card className="lg:col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle className="text-base">Upcoming rides</CardTitle>
-            <Button asChild variant="ghost" size="sm" className="rounded-xl">
-              <Link href="/find">Browse all</Link>
-            </Button>
+      <div className="grid gap-6 md:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base">Ride activity</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
-            {upcoming.map((ride) => (
-              <RideCard key={ride.id} ride={ride} />
-            ))}
+          <CardContent className="space-y-3 text-sm">
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Completed</span>
+              <span className="font-semibold">42</span>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">Cancelled</span>
+              <span className="font-semibold">3</span>
+            </div>
+            <Separator />
+            <div className="flex items-center justify-between">
+              <span className="text-muted-foreground">No-shows</span>
+              <span className="font-semibold">0</span>
+            </div>
           </CardContent>
         </Card>
 
-        <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Ride activity</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-3 text-sm">
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Completed</span>
-                <span className="font-semibold">42</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">Cancelled</span>
-                <span className="font-semibold">3</span>
-              </div>
-              <Separator />
-              <div className="flex items-center justify-between">
-                <span className="text-muted-foreground">No-shows</span>
-                <span className="font-semibold">0</span>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-3">
-              <CardTitle className="text-base">Notifications</CardTitle>
-              <Badge variant="outline" className="rounded-full">
-                {recentNotes.filter((n) => !n.read).length} new
-              </Badge>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {recentNotes.map((n) => (
-                <div key={n.id} className="rounded-2xl border border-border bg-muted/20 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold">{n.title}</p>
-                    <span className="text-[11px] text-muted-foreground">{formatRelative(n.timeISO)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between gap-3">
+            <CardTitle className="text-base">Notifications</CardTitle>
+            <Badge variant="outline" className="rounded-full">
+              {recentNotes.filter((n) => !n.read).length} new
+            </Badge>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {recentNotes.map((n) => (
+              <div key={n.id} className="rounded-2xl border border-border bg-muted/20 p-3">
+                <div className="flex items-start justify-between gap-2">
+                  <p className="text-sm font-semibold">{n.title}</p>
+                  <span className="text-[11px] text-muted-foreground">{formatRelative(n.timeISO)}</span>
                 </div>
-              ))}
-              <Button asChild variant="secondary" className="w-full rounded-xl">
-                <Link href="/notifications">Open notification center</Link>
-              </Button>
-            </CardContent>
-          </Card>
-        </div>
+                <p className="mt-1 text-xs text-muted-foreground">{n.body}</p>
+              </div>
+            ))}
+            <Button asChild variant="secondary" className="w-full rounded-xl">
+              <Link href="/notifications">Open notification center</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

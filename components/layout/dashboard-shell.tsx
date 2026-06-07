@@ -1,5 +1,4 @@
 "use client";
-import { Car } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
@@ -12,15 +11,10 @@ import {
   ClipboardList,
   LayoutDashboard,
   Search,
-  Shield,
   UserRound,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { useUiStore } from "@/store/ui-store";
 import { APP_NAME } from "@/lib/constants";
 
 const nav = [
@@ -215,7 +209,11 @@ useEffect(() => {
             );
         })}
       </nav>
-      <div className="p-3">
+      <div className="p-3 mt-auto space-y-3">
+        <div className="flex items-center justify-between px-3 py-2 rounded-2xl border border-border bg-card/60">
+          <span className="text-xs font-semibold text-muted-foreground">Dark mode</span>
+          <ThemeToggle />
+        </div>
         <div className="rounded-2xl border border-border bg-background/60 p-3 text-xs text-muted-foreground">
           <div className="flex items-center gap-2 text-foreground">
             <Gauge className="h-4 w-4 text-primary" />
@@ -324,71 +322,6 @@ const primary = nav.filter((n) => {
   );
 }
 
-export function DashboardTopBar() {
-  const { sidebarOpen, setSidebarOpen } = useUiStore();
-  const [role, setRole] = useState<string | null>(null);
-
-  useEffect(() => {
-    const checkRole = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-
-      if (!user) {
-        if (typeof window !== "undefined" && sessionStorage.getItem("isAdmin") === "true") {
-          setRole("admin");
-        }
-        return;
-      }
-
-      const { data } = await supabase
-        .from("profiles")
-        .select("role")
-        .eq("id", user.id)
-        .single();
-
-      setRole(data?.role || null);
-    };
-
-    checkRole();
-  }, []);
-
-  return (
-    <div className="sticky top-0 z-30 border-b border-border bg-background/80 backdrop-blur">
-      <div className="flex h-16 items-center gap-3 px-4 sm:px-6">
-        <Sheet open={sidebarOpen} onOpenChange={setSidebarOpen}>
-          <SheetTrigger asChild>
-            <Button variant="outline" size="icon" className="rounded-xl md:hidden" aria-label="Open navigation">
-              <LayoutDashboard className="h-5 w-5" />
-            </Button>
-          </SheetTrigger>
-          <SheetContent side="left" className="w-[min(100%,320px)] p-0">
-            <SheetHeader className="border-b border-border px-4 py-4 text-left">
-              <SheetTitle>Navigate</SheetTitle>
-            </SheetHeader>
-            <div className="p-3">
-              <AppSidebar variant="drawer" />
-            </div>
-          </SheetContent>
-        </Sheet>
-
-        <div className="relative hidden min-w-[200px] flex-1 sm:block">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input readOnly placeholder="Search rides, locations (mock)…" className="rounded-xl pl-9" />
-        </div>
-
-        <div className="ml-auto flex items-center gap-2">
-          <ThemeToggle />
-          {role && role !== "admin" && (
-            <Button asChild variant="secondary" className="hidden rounded-xl sm:inline-flex">
-              <Link href={`/${role}/tracking/r5`}>Resume tracking</Link>
-            </Button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
@@ -460,7 +393,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
     <div className="flex min-h-dvh bg-background">
       {!isFullScreenMapPage && <AppSidebar />}
       <div className={cn("flex min-w-0 flex-1 flex-col", !isFullScreenMapPage && "pb-24 md:pb-0")}>
-        {!isFullScreenMapPage && <DashboardTopBar />}
         <main className={cn(
           isFullScreenMapPage ? "m-0 p-0 h-[calc(100vh-76px)] w-full overflow-hidden relative" : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6"
         )}>

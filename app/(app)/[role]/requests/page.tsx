@@ -6,11 +6,57 @@ import { toast } from "sonner";
 import { useRouter, useParams } from "next/navigation";
 import { Input } from "@/components/ui/input";
 import { EmptyState } from "@/components/common/empty-state";
-import { Search, ClipboardList, History as HistoryIcon, Plus } from "lucide-react";
+import {
+  Search,
+  ClipboardList,
+  History as HistoryIcon,
+  Plus,
+  MapPin,
+  Calendar,
+  Users,
+  Wallet,
+  CreditCard,
+  Banknote,
+  ShieldCheck
+} from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { RoutePreviewMap } from "@/components/maps/dynamic-maps";
+import { Separator } from "@/components/ui/separator";
+
+// Helper to parse payment method and destination
+export function parseRideDestination(destStr: string) {
+  if (!destStr) return { destination: "", paymentMethod: "cash", rideState: "active" };
+  
+  let paymentMethod = "cash";
+  const payMatch = destStr.match(/\[payment_method:([^\]]+)\]/);
+  if (payMatch) {
+    paymentMethod = payMatch[1].trim();
+  }
+
+  let rideState = "active";
+  const stateMatch = destStr.match(/\[ride_state:([^\]]+)\]/);
+  if (stateMatch) {
+    rideState = stateMatch[1].trim();
+  }
+
+  const cleanDest = destStr
+    .replace(/\[payment_method:[^\]]+\]/g, "")
+    .replace(/\[ride_state:[^\]]+\]/g, "")
+    .trim();
+
+  return { destination: cleanDest, paymentMethod, rideState };
+}
 
 export default function RequestsPage() {
   const params = useParams<{ role: string }>();
@@ -31,6 +77,10 @@ export default function RequestsPage() {
   // Passenger state
   const [activeRequests, setActiveRequests] = useState<any[]>([]);
   const [pastRequests, setPastRequests] = useState<any[]>([]);
+
+  // Details Modal state
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const initialize = async () => {
     if (role === "passenger") return;
@@ -68,28 +118,6 @@ export default function RequestsPage() {
 
         if (error) throw error;
         setRequests(data || []);
-      } else if (role === "passenger") {
-        // Load passenger active requests
-        const { data: activeData, error: activeErr } = await supabase
-          .from("ride_requests")
-          .select("*")
-          .eq("passenger_id", currentUserId)
-          .in("status", ["open", "accepted"])
-          .order("departure_time", { ascending: true });
-
-        if (activeErr) throw activeErr;
-        setActiveRequests(activeData || []);
-
-        // Load passenger past requests
-        const { data: pastData, error: pastErr } = await supabase
-          .from("ride_requests")
-          .select("*")
-          .eq("passenger_id", currentUserId)
-          .in("status", ["completed", "cancelled"])
-          .order("created_at", { ascending: false });
-
-        if (pastErr) throw pastErr;
-        setPastRequests(pastData || []);
       }
     } catch (error: any) {
       console.error("Error loading requests:", error);
@@ -139,21 +167,6 @@ export default function RequestsPage() {
     }
   };
 
-  const cancelRequestByPassenger = async (requestId: string) => {
-    try {
-      const { error } = await supabase
-        .from("ride_requests")
-        .update({ status: "cancelled" })
-        .eq("id", requestId);
-
-      if (error) throw error;
-      toast.success("Ride request cancelled");
-      if (userId) loadRequests(userId);
-    } catch (err: any) {
-      toast.error(err.message || "Failed to cancel request");
-    }
-  };
-
   if (role === "passenger") {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -166,135 +179,6 @@ export default function RequestsPage() {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <p className="text-muted-foreground animate-pulse">Loading requests...</p>
-      </div>
-    );
-  }
-
-  // Passenger Render
-  if (role === "passenger") {
-    const hasNoRequests = activeRequests.length === 0 && pastRequests.length === 0;
-
-    if (hasNoRequests) {
-      return (
-        <div className="space-y-8">
-          <PageHeader title="My Requests" description="Manage your submitted ride requests." />
-          <EmptyState
-            icon={ClipboardList}
-            title="No requests yet"
-            description="Request a ride and it will appear here."
-            action={{
-              label: "Request a ride",
-              href: "/passenger/request-ride",
-            }}
-          />
-        </div>
-      );
-    }
-
-    return (
-      <div className="space-y-8">
-        <PageHeader
-          title="My Requests"
-          description="Manage your submitted ride requests."
-          action={
-            <Button asChild className="rounded-xl">
-              <Link href="/passenger/request-ride">
-                <Plus className="mr-2 h-4 w-4" />
-                Request Ride
-              </Link>
-            </Button>
-          }
-        />
-
-        {/* Active Requests */}
-        {activeRequests.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2">
-              <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
-              Active Requests
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {activeRequests.map((request) => (
-                <Card key={request.id} className="overflow-hidden border border-border bg-card">
-                  <CardContent className="p-5 space-y-3">
-                    <h3 className="font-semibold text-base leading-tight">
-                      {request.pickup_location} → {request.destination}
-                    </h3>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>
-                        Departure: <span className="font-medium text-foreground">{new Date(request.departure_time).toLocaleString()}</span>
-                      </p>
-                      <p>Seats Needed: <span className="font-medium text-foreground">{request.seats_needed}</span></p>
-                      <p className="flex items-center gap-2 mt-1">
-                        Status:{" "}
-                        {request.status === "open" ? (
-                          <span className="inline-flex items-center rounded-full bg-yellow-500/15 px-2.5 py-0.5 text-xs font-semibold text-yellow-500">
-                            Waiting for Driver
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-emerald-500/15 px-2.5 py-0.5 text-xs font-semibold text-emerald-500">
-                            Driver Assigned
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    {request.status === "open" && (
-                      <Button
-                        variant="destructive"
-                        className="w-full rounded-xl text-sm"
-                        onClick={() => cancelRequestByPassenger(request.id)}
-                      >
-                        Cancel Request
-                      </Button>
-                    )}
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* Past Requests */}
-        {pastRequests.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-lg font-bold tracking-tight text-foreground flex items-center gap-2 mt-6">
-              <HistoryIcon className="h-4 w-4 text-muted-foreground" />
-              Request History
-            </h2>
-            <div className="grid gap-4 md:grid-cols-2">
-              {pastRequests.map((request) => (
-                <Card key={request.id} className="opacity-85 hover:opacity-100 transition-opacity">
-                  <CardContent className="p-5 space-y-3">
-                    <h3 className="font-semibold text-base leading-tight">
-                      {request.pickup_location} → {request.destination}
-                    </h3>
-                    <div className="text-sm text-muted-foreground space-y-1">
-                      <p>
-                        Departure: <span>{new Date(request.departure_time).toLocaleString()}</span>
-                      </p>
-                      <p>Seats Needed: <span>{request.seats_needed}</span></p>
-                      <p className="flex items-center gap-2">
-                        Status:{" "}
-                        {request.status === "completed" ? (
-                          <span className="inline-flex items-center rounded-full bg-green-500/10 px-2.5 py-0.5 text-xs font-medium text-green-400">
-                            Completed
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center rounded-full bg-red-500/10 px-2.5 py-0.5 text-xs font-medium text-red-400">
-                            Cancelled
-                          </span>
-                        )}
-                      </p>
-                    </div>
-                    <p className="text-[11px] text-muted-foreground pt-1">
-                      Requested on {new Date(request.created_at).toLocaleString()}
-                    </p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        )}
       </div>
     );
   }
@@ -353,24 +237,182 @@ export default function RequestsPage() {
         />
       ) : (
         <div className="space-y-4">
-          {filteredRequests.map((request) => (
-            <Card key={request.id}>
-              <CardContent className="p-4 space-y-2">
-                <h3 className="font-semibold">
-                  {request.pickup_location} → {request.destination}
-                </h3>
-                <p>Departure: {new Date(request.departure_time).toLocaleString()}</p>
-                <p>Seats Needed: {request.seats_needed}</p>
-                {userId !== request.passenger_id && (
-                  <Button className="mt-3" onClick={() => acceptRequest(request)}>
-                    Accept Request
-                  </Button>
-                )}
-              </CardContent>
-            </Card>
-          ))}
+          {filteredRequests.map((request) => {
+            const { destination, paymentMethod } = parseRideDestination(request.destination);
+            return (
+              <Card key={request.id} className="overflow-hidden border border-border bg-card">
+                <CardContent className="p-5 space-y-3">
+                  <div className="flex justify-between items-start">
+                    <h3 className="font-semibold text-base leading-tight text-foreground">
+                      {request.pickup_location} → {destination}
+                    </h3>
+                    {paymentMethod === "tng" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500 uppercase">
+                        <Wallet className="h-3 w-3" /> TNG
+                      </span>
+                    )}
+                    {paymentMethod === "card" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-500 uppercase">
+                        <CreditCard className="h-3 w-3" /> Card (Stripe)
+                      </span>
+                    )}
+                    {paymentMethod === "cash" && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500 uppercase">
+                        <Banknote className="h-3 w-3" /> Cash
+                      </span>
+                    )}
+                  </div>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>Departure: <span className="font-medium text-foreground">{new Date(request.departure_time).toLocaleString()}</span></p>
+                    <p>Seats Needed: <span className="font-medium text-foreground">{request.seats_needed}</span></p>
+                  </div>
+                  {userId !== request.passenger_id && (
+                    <div className="flex gap-2 pt-2">
+                      <Button
+                        variant="secondary"
+                        className="flex-1 rounded-xl text-xs"
+                        onClick={() => {
+                          setSelectedRequest(request);
+                          setDetailsOpen(true);
+                        }}
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        className="flex-1 rounded-xl text-xs font-semibold"
+                        onClick={() => acceptRequest(request)}
+                      >
+                        Accept Request
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       )}
+
+      {/* View Details Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={(open) => !open && setDetailsOpen(false)}>
+        {selectedRequest && (() => {
+          const { destination, paymentMethod } = parseRideDestination(selectedRequest.destination);
+          const estPrice = Math.max(4, selectedRequest.seats_needed * 3);
+          
+          return (
+            <DialogContent className="sm:max-w-lg overflow-hidden rounded-2xl border border-border bg-card">
+              <DialogHeader>
+                <DialogTitle className="text-lg font-bold">
+                  Ride Request Details
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  View pickup, route map, and passenger parameters before accepting.
+                </DialogDescription>
+              </DialogHeader>
+
+              <Separator />
+
+              <div className="space-y-4 py-2">
+                {/* Route visualization map */}
+                <div className="rounded-xl overflow-hidden border border-border h-48 bg-muted relative">
+                  <RoutePreviewMap
+                    from={[2.3135, 102.3212]} // UTeM Main Campus coords
+                    to={[2.2215, 102.2511]}   // Melaka Sentral coords
+                    className="w-full h-full"
+                  />
+                  <div className="absolute top-2 left-2 z-10 bg-background/80 backdrop-blur px-2.5 py-1 rounded-lg border border-border text-[10px] font-semibold flex items-center gap-1 shadow-sm">
+                    <MapPin className="h-3 w-3 text-primary" />
+                    <span>Route preview (Map)</span>
+                  </div>
+                </div>
+
+                <div className="grid gap-3 grid-cols-2 text-xs">
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Pickup Origin</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-primary shrink-0" />
+                      {selectedRequest.pickup_location}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Destination</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5 text-red-500 shrink-0" />
+                      {destination}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Departure Time</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                      {new Date(selectedRequest.departure_time).toLocaleString()}
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Payment Method</span>
+                    <div className="pt-0.5">
+                      {paymentMethod === "tng" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500">
+                          <Wallet className="h-3 w-3" /> TNG eWallet
+                        </span>
+                      )}
+                      {paymentMethod === "card" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-indigo-500">
+                          <CreditCard className="h-3 w-3" /> Card (Stripe)
+                        </span>
+                      )}
+                      {paymentMethod === "cash" && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-emerald-500">
+                          <Banknote className="h-3 w-3" /> Cash
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Seats Needed</span>
+                    <span className="font-semibold text-foreground flex items-center gap-1">
+                      <Users className="h-3.5 w-3.5 text-muted-foreground" />
+                      {selectedRequest.seats_needed} Seats
+                    </span>
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-muted-foreground block">Estimated Share</span>
+                    <span className="font-bold text-foreground flex items-center gap-0.5 text-sm">
+                      <span className="text-xs text-muted-foreground font-normal mr-0.5">RM</span>
+                      {estPrice.toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground flex gap-2 items-start">
+                  <ShieldCheck className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                  <div>
+                    <span className="font-semibold text-foreground">Verified Student Ride</span>
+                    <p className="mt-0.5">Passenger is a verified student of UTeM. Accept the ride to connect with them directly.</p>
+                  </div>
+                </div>
+              </div>
+
+              <Separator />
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" className="rounded-xl text-xs" onClick={() => setDetailsOpen(false)}>
+                  Close
+                </Button>
+                <Button
+                  className="rounded-xl text-xs font-semibold"
+                  onClick={() => {
+                    acceptRequest(selectedRequest);
+                    setDetailsOpen(false);
+                  }}
+                >
+                  Accept Request
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          );
+        })()}
+      </Dialog>
     </div>
   );
 }

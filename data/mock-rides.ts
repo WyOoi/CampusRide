@@ -81,7 +81,7 @@ export const mockRides: MockRide[] = [
     driverName: "Darren Lim",
     driverRating: 4.7,
     origin: "UTeM Main Campus",
-    destination: "Tesco Cheng, Melaka",
+    destination: "Tesco Cheng, Melaka [payment_method:card]",
     originCoords: [2.3135, 102.3212],
     destinationCoords: [2.252, 102.276],
     departureISO: new Date(Date.now() + 90 * 60 * 1000).toISOString(),

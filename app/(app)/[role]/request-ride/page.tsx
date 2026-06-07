@@ -14,6 +14,7 @@ import { RoutePreviewMap } from "@/components/maps/dynamic-maps";
 import { LocationSearch } from "@/components/maps/location-search";
 import { motion } from "framer-motion";
 import { ChevronUp, ChevronDown, Navigation, Car } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function RequestRidePage() {
   const [seats, setSeats] = useState(3);
@@ -25,6 +26,7 @@ export default function RequestRidePage() {
   const [loading, setLoading] = useState(false);
   const [distanceKm, setDistanceKm] = useState(12.4);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   const router = useRouter();
 
@@ -117,10 +119,12 @@ export default function RequestRidePage() {
         return;
       }
 
+      const finalDestination = `${destination} [payment_method:${paymentMethod}]`;
+
       const { error } = await supabase.from("ride_requests").insert({
         passenger_id: user.id,
         pickup_location: pickupLocation,
-        destination,
+        destination: finalDestination,
         departure_time: departureTime,
         seats_needed: seats,
         status: "open",
@@ -272,6 +276,20 @@ export default function RequestRidePage() {
                 onChange={(e) => setSeats(Number(e.target.value))}
                 className="rounded-xl"
               />
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="payment-method" className="rounded-xl">
+                  <SelectValue placeholder="Select payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="tng">Touch 'n Go eWallet</SelectItem>
+                  <SelectItem value="card">Debit / Credit Card (Stripe)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

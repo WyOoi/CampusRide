@@ -13,6 +13,7 @@ import { RoutePreviewMap } from "@/components/maps/dynamic-maps";
 import { LocationSearch } from "@/components/maps/location-search";
 import { motion } from "framer-motion";
 import { ChevronUp, ChevronDown, Navigation, CarFront } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export default function OfferRidePage() {
   const [seats, setSeats] = useState(3);
@@ -25,6 +26,7 @@ export default function OfferRidePage() {
   const [loading, setLoading] = useState(false);
   const [distanceKm, setDistanceKm] = useState(12.4);
   const [isExpanded, setIsExpanded] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState("cash");
 
   // Automatically calculate suggested cost per seat based on the real road distance
   const suggestedCost = useMemo(() => {
@@ -112,10 +114,12 @@ export default function OfferRidePage() {
         return;
       }
 
+      const finalDestination = `${destination} [payment_method:${paymentMethod}]`;
+
       const { error } = await supabase.from("rides").insert({
         driver_id: user.id,
         pickup_location: pickupLocation,
-        destination,
+        destination: finalDestination,
         departure_time: departureTime,
         available_seats: seats,
         cost_per_person: costPerPerson,
@@ -133,6 +137,7 @@ export default function OfferRidePage() {
       setDepartureTime("");
       setSeats(3);
       setCostPerPerson(5);
+      setPaymentMethod("cash");
       setIsExpanded(false);
     } catch (error) {
       const err = error as Error;
@@ -288,6 +293,20 @@ export default function OfferRidePage() {
                 onChange={(e) => setCostPerPerson(Number(e.target.value))}
                 className="rounded-xl"
               />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="payment-method">Payment Method</Label>
+              <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                <SelectTrigger id="payment-method" className="rounded-xl">
+                  <SelectValue placeholder="Select payment" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="tng">Touch 'n Go eWallet</SelectItem>
+                  <SelectItem value="card">Debit / Credit Card (Stripe)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

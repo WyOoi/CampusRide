@@ -1,6 +1,8 @@
 "use client";
 
+import { useState } from "react";
 import { useSessionStore } from "@/store/session-store";
+import { ThemeToggle } from "@/components/layout/theme-toggle";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -14,6 +16,7 @@ import { toast } from "sonner";
 
 export default function ProfilePage() {
   const { user } = useSessionStore();
+  const [isEditing, setIsEditing] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -21,9 +24,26 @@ export default function ProfilePage() {
         title="Profile"
         description="Manage identity, vehicle, preferences, and payment UI — all local mock forms."
         action={
-          <Button className="rounded-xl" onClick={() => toast.success("Profile saved (mock)")}>
-            Save changes
-          </Button>
+          isEditing ? (
+            <div className="flex gap-2">
+              <Button variant="outline" className="rounded-xl" onClick={() => setIsEditing(false)}>
+                Cancel
+              </Button>
+              <Button
+                className="rounded-xl"
+                onClick={() => {
+                  toast.success("Profile saved (mock)");
+                  setIsEditing(false);
+                }}
+              >
+                Save changes
+              </Button>
+            </div>
+          ) : (
+            <Button className="rounded-xl" onClick={() => setIsEditing(true)}>
+              Edit Profile
+            </Button>
+          )
         }
       />
 
@@ -50,26 +70,42 @@ export default function ProfilePage() {
         </TabsList>
 
         <TabsContent value="settings">
-          <Card>
-            <CardHeader>
-              <CardTitle>Account</CardTitle>
-              <CardDescription>Basic identity pulled from the mock session store.</CardDescription>
-            </CardHeader>
-            <CardContent className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Full name</Label>
-                <Input defaultValue={user.name} className="rounded-xl" />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>University email</Label>
-                <Input defaultValue={user.email} className="rounded-xl" readOnly />
-              </div>
-              <div className="space-y-2 sm:col-span-2">
-                <Label>Faculty</Label>
-                <Input defaultValue={user.faculty} className="rounded-xl" />
-              </div>
-            </CardContent>
-          </Card>
+          <div className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Account</CardTitle>
+                <CardDescription>Basic identity pulled from the mock session store.</CardDescription>
+              </CardHeader>
+              <CardContent className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Full name</Label>
+                  <Input defaultValue={user.name} className="rounded-xl" readOnly={!isEditing} />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>University email</Label>
+                  <Input defaultValue={user.email} className="rounded-xl" readOnly />
+                </div>
+                <div className="space-y-2 sm:col-span-2">
+                  <Label>Faculty</Label>
+                  <Input defaultValue={user.faculty} className="rounded-xl" readOnly={!isEditing} />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Display Theme</CardTitle>
+                <CardDescription>Select your preferred color theme for the application interface.</CardDescription>
+              </CardHeader>
+              <CardContent className="flex items-center justify-between p-6">
+                <div>
+                  <p className="text-sm font-semibold">Dark mode</p>
+                  <p className="text-xs text-muted-foreground">Toggle between light and dark mode</p>
+                </div>
+                <ThemeToggle />
+              </CardContent>
+            </Card>
+          </div>
         </TabsContent>
 
         <TabsContent value="vehicle">
@@ -81,15 +117,15 @@ export default function ProfilePage() {
             <CardContent className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label>Model</Label>
-                <Input defaultValue="Perodua Myvi" className="rounded-xl" />
+                <Input defaultValue="Perodua Myvi" className="rounded-xl" readOnly={!isEditing} />
               </div>
               <div className="space-y-2">
                 <Label>Colour</Label>
-                <Input defaultValue="Midnight blue" className="rounded-xl" />
+                <Input defaultValue="Midnight blue" className="rounded-xl" readOnly={!isEditing} />
               </div>
               <div className="space-y-2 sm:col-span-2">
                 <Label>Plate</Label>
-                <Input defaultValue="ABC 1234" className="rounded-xl" />
+                <Input defaultValue="ABC 1234" className="rounded-xl" readOnly={!isEditing} />
               </div>
             </CardContent>
           </Card>
@@ -112,7 +148,7 @@ export default function ProfilePage() {
                     <p className="text-sm font-semibold">{p.label}</p>
                     <p className="text-xs text-muted-foreground">Stored locally in a future version.</p>
                   </div>
-                  <Switch defaultChecked={p.defaultChecked} />
+                  <Switch defaultChecked={p.defaultChecked} disabled={!isEditing} />
                 </div>
               ))}
             </CardContent>

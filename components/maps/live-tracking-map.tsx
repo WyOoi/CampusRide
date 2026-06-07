@@ -34,16 +34,64 @@ function interpolate(a: [number, number], b: [number, number], t: number): [numb
 export function LiveTrackingMap({
   origin,
   destination,
+  driverPos: propDriverPos,
+  onRouteCalculated,
   className,
 }: {
   origin: [number, number];
   destination: [number, number];
+  driverPos?: [number, number];
+  onRouteCalculated?: (distanceKm: number) => void;
   className?: string;
 }) {
-  const route = useMemo(() => [origin, destination], [origin, destination]);
+  const [fullRouteCoords, setFullRouteCoords] = useState<[number, number][]>([origin, destination]);
   const [t, setT] = useState(0.35);
 
+  const onRouteCalculatedRef = useRef(onRouteCalculated);
   useEffect(() => {
+    onRouteCalculatedRef.current = onRouteCalculated;
+  }, [onRouteCalculated]);
+
+  // 1. Fetch full road route from origin to destination for display
+  useEffect(() => {
+    if (!origin || !destination) return;
+    const url = `https://router.project-osrm.org/route/v1/driving/${origin[1]},${origin[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+          const coords: [number, number][] = data.routes[0].geometry.coordinates.map(
+            (c: [number, number]) => [c[1], c[0]] as [number, number]
+          );
+          setFullRouteCoords(coords);
+          
+          // If no live driver position, trigger the total distance
+          if (!propDriverPos) {
+            onRouteCalculatedRef.current?.(data.routes[0].distance / 1000);
+          }
+        }
+      })
+      .catch((err) => console.error("Failed to fetch full OSRM route:", err));
+  }, [origin, destination, propDriverPos]);
+
+  // 2. Fetch remaining road distance from driver position to destination
+  useEffect(() => {
+    if (!propDriverPos || !destination) return;
+    const url = `https://router.project-osrm.org/route/v1/driving/${propDriverPos[1]},${propDriverPos[0]};${destination[1]},${destination[0]}?overview=full&geometries=geojson`;
+    fetch(url)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.code === "Ok" && data.routes && data.routes.length > 0) {
+          const distKm = data.routes[0].distance / 1000;
+          onRouteCalculatedRef.current?.(distKm);
+        }
+      })
+      .catch((err) => console.error("Failed to fetch remaining OSRM route:", err));
+  }, [propDriverPos, destination]);
+
+  // 3. Mock interpolation when no live driverPos
+  useEffect(() => {
+    if (propDriverPos) return;
     const id = window.setInterval(() => {
       setT((prev) => {
         const next = prev + 0.02;
@@ -51,9 +99,9 @@ export function LiveTrackingMap({
       });
     }, 1600);
     return () => window.clearInterval(id);
-  }, []);
+  }, [propDriverPos]);
 
-  const driverPos = interpolate(origin, destination, t);
+  const driverPos = propDriverPos || interpolate(origin, destination, t);
 
   return (
     <div className={className}>
@@ -64,8 +112,8 @@ export function LiveTrackingMap({
         scrollWheelZoom={false}
       >
         <TileLayer url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png" attribution="&copy; OpenStreetMap" />
-        <FollowDriver position={driverPos} route={route} />
-        <Polyline positions={route} pathOptions={{ color: "#059669", weight: 4, opacity: 0.75, dashArray: "6 8" }} />
+        <FollowDriver position={driverPos} route={fullRouteCoords} />
+        <Polyline positions={fullRouteCoords} pathOptions={{ color: "#059669", weight: 4, opacity: 0.85 }} />
         <CircleMarker center={origin} radius={8} pathOptions={{ color: "#059669", fillColor: "#ecfdf5", fillOpacity: 1 }} />
         <CircleMarker
           center={destination}
