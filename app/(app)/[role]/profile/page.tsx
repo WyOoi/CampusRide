@@ -93,10 +93,10 @@ export default function ProfilePage() {
 
       <Tabs 
         defaultValue="settings" 
-        className="flex flex-col md:flex-row gap-6 md:gap-10"
+        className="flex flex-col md:flex-row gap-6 md:gap-10 md:items-start"
         onValueChange={() => { setIsEditing(false); setHasChanges(false); }}
       >
-        <TabsList className="flex flex-col h-auto bg-transparent p-0 space-y-2 w-full md:w-64 shrink-0">
+        <TabsList className="flex flex-col justify-start h-auto bg-transparent p-0 space-y-2 w-full md:w-64 shrink-0">
           <TabsTrigger value="settings" className="w-full justify-start px-4 py-2.5 text-left rounded-xl data-[state=active]:bg-primary/10 data-[state=active]:text-primary data-[state=active]:shadow-none hover:bg-muted/50 transition-colors">
             Settings
           </TabsTrigger>
