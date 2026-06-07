@@ -1,10 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useSessionStore } from "@/store/session-store";
 import { ThemeToggle } from "@/components/layout/theme-toggle";
-import { PageHeader } from "@/components/common/page-header";
+import { supabase } from "@/lib/supabase";
+import { LogOut } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
@@ -17,6 +18,7 @@ import { toast } from "sonner";
 
 export default function ProfilePage() {
   const params = useParams<{ role: string }>();
+  const router = useRouter();
   const { user } = useSessionStore();
   const [isEditing, setIsEditing] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
@@ -51,13 +53,21 @@ export default function ProfilePage() {
     toast.success("DuitNow QR Code removed!");
   };
 
+  const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("isAdmin");
+    }
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   const handleInputChange = () => setHasChanges(true);
 
   const actionButtonsJsx = (
     <div className="flex items-center gap-3 mt-6">
       {!isEditing ? (
         <Button className="rounded-xl" onClick={() => setIsEditing(true)}>
-          Edit Data
+          Edit
         </Button>
       ) : (
         <>
@@ -86,10 +96,22 @@ export default function ProfilePage() {
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title="Profile"
-        description="Manage identity, vehicle settings, saved locations, and preferences."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Profile</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">Manage identity, vehicle settings, saved locations, and preferences.</p>
+        </div>
+        <Button 
+          variant="destructive" 
+          size="icon" 
+          onClick={handleLogout} 
+          className="shrink-0 bg-red-600 hover:bg-red-700 text-white rounded-full h-10 w-10 shadow-sm"
+          title="Logout"
+        >
+          <LogOut className="h-5 w-5" />
+          <span className="sr-only">Logout</span>
+        </Button>
+      </div>
 
       <Tabs 
         defaultValue="settings" 

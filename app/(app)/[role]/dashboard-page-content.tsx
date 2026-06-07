@@ -228,10 +228,23 @@ setRole(
 
   return (
     <div className="space-y-8">
-      <PageHeader
-        title={`Hi ${fullName.split(" ")[0]}`}
-        description={`${email} • ${role}`}
-        action={
+      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="space-y-1">
+          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hi {fullName.split(" ")[0]}</h1>
+          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{email} • {role}</p>
+        </div>
+        
+        <div className="flex flex-col gap-4 sm:items-end">
+          <Button 
+            variant="destructive" 
+            size="icon" 
+            onClick={handleLogout} 
+            className="shrink-0 bg-red-600 hover:bg-red-700 text-white rounded-full h-10 w-10 shadow-sm self-end"
+            title="Logout"
+          >
+            <LogOut className="h-5 w-5" />
+            <span className="sr-only">Logout</span>
+          </Button>
           <div className="flex flex-wrap gap-2">
             <Button asChild variant="outline" className="rounded-xl">
               <Link href="/orders">
@@ -261,16 +274,8 @@ setRole(
               </Button>
             )}
           </div>
-        }
-      />
-<Button
-  variant="destructive"
-  className="rounded-xl"
-  onClick={handleLogout}
->
-  <LogOut className="mr-2 h-4 w-4" />
-  Logout
-</Button>
+        </div>
+      </div>
       {role.toLowerCase() === "both" && (
         <MotionCard>
         <Card className="overflow-hidden rounded-2xl border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card">

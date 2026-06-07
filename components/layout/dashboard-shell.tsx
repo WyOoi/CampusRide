@@ -285,8 +285,7 @@ const primary = nav.filter((n) => {
   const isFullScreenMapPage = pathname.endsWith("/offer") || pathname.endsWith("/request-ride");
   return (
     <nav className={cn(
-      "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/90 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur",
-      !isFullScreenMapPage && "md:hidden"
+      "fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-background/90 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 backdrop-blur"
     )}>
       <div className="mx-auto flex max-w-lg items-stretch justify-around px-2">
         {primary.map((item) => {
@@ -391,8 +390,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="flex min-h-dvh bg-background">
-      {!isFullScreenMapPage && <AppSidebar />}
-      <div className={cn("flex min-w-0 flex-1 flex-col", !isFullScreenMapPage && "pb-24 md:pb-0")}>
+      <div className={cn("flex min-w-0 flex-1 flex-col", !isFullScreenMapPage && "pb-24")}>
         <main className={cn(
           isFullScreenMapPage ? "m-0 p-0 h-[calc(100dvh-76px)] w-full overflow-hidden relative" : "mx-auto w-full max-w-6xl flex-1 px-4 py-6 sm:px-6"
         )}>
