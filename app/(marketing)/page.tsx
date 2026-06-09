@@ -31,6 +31,7 @@ import { Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { APP_NAME, UNIVERSITY } from "@/lib/constants";
+import { supabase } from "@/lib/supabase";
 
 const stats = [
   { label: "VERIFIED ACTIVE ACCOUNTS", value: "1,248 Users", hint: "Validated UTeM directories", icon: Users, color: "text-blue-500" },
@@ -79,6 +80,12 @@ export default function LandingPage() {
     "Initializing GeoMesh...",
     "Scanning UTeM Main Campus...",
   ]);
+  const [dbStats, setDbStats] = useState({
+    usersCount: 0,
+    ridesCount: 0,
+    avgFare: 0,
+  });
+  const [activeRide, setActiveRide] = useState<any>(null);
 
   // Framer Motion 3D Hover Tilt effect values
   const x = useMotionValue(0);
@@ -103,25 +110,127 @@ export default function LandingPage() {
     y.set(0);
   };
 
-  // Simulate real-time database transaction log activity
   useEffect(() => {
-    const actions = [
-      "Route optimized for FTMK sector",
-      "Secure session verified via Supabase JWT",
-      "Real-time driver GPS ping received",
-      "Seat booking confirmed in PostgreSQL",
-      "Toll-split fare calculated via OSRM",
-    ];
+    const fetchDbData = async () => {
+      try {
+        // Fetch profiles count
+        const { count: usersCount } = await supabase
+          .from("profiles")
+          .select("*", { count: "exact", head: true });
 
-    const interval = setInterval(() => {
-      const randomAction = actions[Math.floor(Math.random() * actions.length)];
-      const newLog = `[${new Date().toLocaleTimeString()}] ${randomAction}`;
-      
-      setMatchLogs((prev) => [newLog, ...prev.slice(0, 3)]);
-    }, 4500);
+        // Fetch rides
+        const { data: rides } = await supabase
+          .from("rides")
+          .select("cost_per_person, available_seats, pickup_location, destination, departure_time, status, created_at");
 
+        let totalRides = 0;
+        let completedOrActiveRides = 0;
+        let avgFare = 0;
+        let latestActive = null;
+
+        if (rides) {
+          totalRides = rides.length;
+          completedOrActiveRides = rides.filter(r => r.status === "active" || r.status === "completed").length;
+          
+          let totalFare = 0;
+          let fareCount = 0;
+          rides.forEach((r) => {
+            if (r.cost_per_person !== null && r.cost_per_person !== undefined) {
+              totalFare += r.cost_per_person;
+              fareCount++;
+            }
+          });
+          avgFare = fareCount > 0 ? totalFare / fareCount : 0;
+
+          // Find latest active ride
+          const activeList = rides.filter(r => r.status === "active");
+          if (activeList.length > 0) {
+            activeList.sort((a, b) => new Date(b.created_at || "").getTime() - new Date(a.created_at || "").getTime());
+            latestActive = activeList[0];
+          } else if (rides.length > 0) {
+            latestActive = rides[0];
+          }
+        }
+
+        setDbStats({
+          usersCount: usersCount || 0,
+          ridesCount: completedOrActiveRides || totalRides || 0,
+          avgFare,
+        });
+        setActiveRide(latestActive);
+
+        // Fetch logs
+        const { data: recentRequests } = await supabase
+          .from("ride_requests")
+          .select("created_at, pickup_location, destination")
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        const { data: recentBookings } = await supabase
+          .from("bookings")
+          .select("created_at, booking_status")
+          .order("created_at", { ascending: false })
+          .limit(3);
+
+        const logsList: { time: Date; text: string }[] = [];
+
+        (rides || []).slice(0, 3).forEach(r => {
+          if (r.created_at) {
+            logsList.push({
+              time: new Date(r.created_at),
+              text: `New ride offered: ${r.pickup_location} to ${r.destination.replace(/\[[^\]]+\]/g, "").trim()}`
+            });
+          }
+        });
+
+        (recentRequests || []).forEach(req => {
+          if (req.created_at) {
+            logsList.push({
+              time: new Date(req.created_at),
+              text: `New request: ${req.pickup_location} to ${req.destination.replace(/\[[^\]]+\]/g, "").trim()}`
+            });
+          }
+        });
+
+        (recentBookings || []).forEach(b => {
+          if (b.created_at) {
+            logsList.push({
+              time: new Date(b.created_at),
+              text: `Booking updated: status is ${b.booking_status || "pending"}`
+            });
+          }
+        });
+
+        if (logsList.length === 0) {
+          logsList.push({ time: new Date(), text: "System online - waiting for live carpool events." });
+          logsList.push({ time: new Date(Date.now() - 60000), text: "Secure session verified via Supabase JWT." });
+        } else {
+          logsList.push({ time: new Date(Date.now() - 30000), text: "Connected to Supabase PostgreSQL Real-time sync." });
+        }
+
+        logsList.sort((a, b) => b.time.getTime() - a.time.getTime());
+
+        const formattedLogs = logsList.slice(0, 4).map(item => {
+          return `[${item.time.toLocaleTimeString()}] ${item.text}`;
+        });
+
+        setMatchLogs(formattedLogs);
+
+      } catch (err) {
+        console.error("Error fetching homepage DB stats:", err);
+      }
+    };
+
+    fetchDbData();
+    const interval = setInterval(fetchDbData, 10000);
     return () => clearInterval(interval);
   }, []);
+
+  const displayStats = [
+    { label: "VERIFIED ACTIVE ACCOUNTS", value: dbStats.usersCount > 0 ? `${dbStats.usersCount} Users` : "1,248 Users", hint: "Validated UTeM directories", icon: Users, color: "text-blue-500" },
+    { label: "ACTIVE CARPOOLS", value: dbStats.ridesCount > 0 ? `${dbStats.ridesCount} Trips` : "386 Trips", hint: "Completed or active rides", icon: Cpu, color: "text-cyan-500" },
+    { label: "AVERAGE VALUE SHARE", value: dbStats.avgFare > 0 ? `RM${dbStats.avgFare.toFixed(2)}` : "RM4.50 Trip", hint: "Direct student-to-driver split", icon: Wallet, color: "text-violet-500" },
+  ];
 
   return (
     <div className="min-h-screen bg-[#060a13] text-slate-100 selection:bg-cyan-500/30 selection:text-cyan-200 overflow-hidden relative">
@@ -221,11 +330,13 @@ export default function LandingPage() {
                   <div className="flex items-center justify-between gap-3">
                     <div>
                       <span className="text-[9px] font-mono tracking-widest text-cyan-400 block uppercase">OSRM PATHFINDER</span>
-                      <h3 className="text-base font-bold text-slate-200">Melaka Sentral Node</h3>
+                      <h3 className="text-base font-bold text-slate-200 truncate max-w-[200px]" title={activeRide ? activeRide.pickup_location : "Melaka Sentral Node"}>
+                        {activeRide ? activeRide.pickup_location : "Melaka Sentral Node"}
+                      </h3>
                     </div>
                     <div className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-blue-500/10 border border-blue-500/20 text-[10px] font-mono font-semibold text-blue-400">
                       <span className="w-1.5 h-1.5 rounded-full bg-blue-400 animate-pulse" />
-                      ROUTING_ACTIVE
+                      {activeRide ? "LIVE_CARPOOL" : "ROUTING_ACTIVE"}
                     </div>
                   </div>
 
@@ -263,9 +374,9 @@ export default function LandingPage() {
                     <div className="absolute top-1/2 right-1/3 w-1.5 h-1.5 rounded-full bg-slate-600" />
                     
                     {/* HUD Info */}
-                    <div className="absolute bottom-2 left-3 font-mono text-[8px] text-slate-500 flex items-center gap-1">
+                    <div className="absolute bottom-2 left-3 font-mono text-[8px] text-slate-500 flex items-center gap-1 max-w-[200px] truncate" title={activeRide ? "TO: " + activeRide.destination.replace(/\[[^\]]+\]/g, "").trim() : "GPS: SYNCED · OSRM_V5_ENG"}>
                       <Compass className="h-2.5 w-2.5 text-cyan-500" />
-                      <span>GPS: SYNCED · OSRM_V5_ENG</span>
+                      <span>{activeRide ? "TO: " + activeRide.destination.replace(/\[[^\]]+\]/g, "").trim() : "GPS: SYNCED · OSRM_V5_ENG"}</span>
                     </div>
                     <div className="absolute top-2 right-3 font-mono text-[8px] text-slate-500">
                       <span>CLIENT_GRID_UTEM</span>
@@ -277,15 +388,21 @@ export default function LandingPage() {
                   <div className="grid grid-cols-3 gap-3 text-center text-xs">
                     <div className="rounded-xl bg-slate-900/30 border border-slate-900 p-2">
                       <p className="text-[10px] text-slate-500 uppercase font-mono">SEATS</p>
-                      <p className="mt-1 text-sm font-bold text-slate-200">2 Available</p>
+                      <p className="mt-1 text-sm font-bold text-slate-200">
+                        {activeRide ? `${activeRide.available_seats} Seats` : "2 Available"}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-slate-900/30 border border-slate-900 p-2">
-                      <p className="text-[10px] text-slate-500 uppercase font-mono">DISTANCE</p>
-                      <p className="mt-1 text-sm font-bold text-slate-200">18.4 km</p>
+                      <p className="text-[10px] text-slate-500 uppercase font-mono">DEPARTURE</p>
+                      <p className="mt-1 text-xs font-bold text-slate-200 truncate" title={activeRide ? new Date(activeRide.departure_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "18.4 km"}>
+                        {activeRide ? new Date(activeRide.departure_time).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "18.4 km"}
+                      </p>
                     </div>
                     <div className="rounded-xl bg-slate-900/30 border border-slate-900 p-2">
                       <p className="text-[10px] text-slate-500 uppercase font-mono">FARE SPLIT</p>
-                      <p className="mt-1 text-sm font-bold text-cyan-400">RM 5.00</p>
+                      <p className="mt-1 text-sm font-bold text-cyan-400">
+                        RM {activeRide ? Number(activeRide.cost_per_person).toFixed(2) : "5.00"}
+                      </p>
                     </div>
                   </div>
                 </CardContent>
@@ -300,7 +417,7 @@ export default function LandingPage() {
       <section className="border-y border-slate-900 bg-slate-950/50 backdrop-blur-md py-12 relative">
         <div className="absolute inset-0 bg-cyan-500/[0.01] pointer-events-none" />
         <div className="mx-auto grid max-w-6xl gap-6 px-4 sm:grid-cols-3 sm:px-6">
-          {stats.map((s, i) => (
+          {displayStats.map((s, i) => (
             <motion.div
               key={s.label}
               initial={{ opacity: 0, y: 15 }}
