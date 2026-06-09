@@ -14,6 +14,7 @@ import { Switch } from "@/components/ui/switch";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner"; 
 
 export default function ProfilePage() {
@@ -25,8 +26,41 @@ export default function ProfilePage() {
   const [duitnowQr, setDuitnowQr] = useState<string | null>(null);
   const [defaultPayment, setDefaultPayment] = useState("tng");
 
-  // Load saved DuitNow QR code from localstorage on mount
+  const [profileId, setProfileId] = useState<string | null>(null);
+  const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
+  const [faculty, setFaculty] = useState(user?.faculty || "Technology Campus — FTMK");
+  const [gender, setGender] = useState("Prefer not to say");
+  const [phoneNumber, setPhoneNumber] = useState("");
+  
+  const [vehicleModel, setVehicleModel] = useState("Perodua Myvi");
+  const [vehicleColor, setVehicleColor] = useState("Midnight blue");
+  const [vehiclePlate, setVehiclePlate] = useState("ABC 1234");
+
   useEffect(() => {
+    const loadProfile = async () => {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", authUser.id)
+        .single();
+
+      if (profile) {
+        setProfileId(profile.id);
+        setFullName(profile.full_name || "");
+        setEmail(profile.email || "");
+        if (profile.gender) setGender(profile.gender);
+        if (profile.phone_number) setPhoneNumber(profile.phone_number);
+        if (profile.vehicle_model) setVehicleModel(profile.vehicle_model);
+        if (profile.vehicle_color) setVehicleColor(profile.vehicle_color);
+        if (profile.vehicle_plate) setVehiclePlate(profile.vehicle_plate);
+      }
+    };
+    loadProfile();
+    
     if (typeof window !== "undefined") {
       const savedQr = localStorage.getItem("campusride_driver_duitnow_qr");
       if (savedQr) setDuitnowQr(savedQr);
@@ -63,6 +97,47 @@ export default function ProfilePage() {
 
   const handleInputChange = () => setHasChanges(true);
 
+  const saveProfile = async () => {
+    if (!profileId) return;
+    
+    // Validate Phone Number
+    if (phoneNumber && !/^(\+60|0)[1-9][0-9]{7,9}$/.test(phoneNumber)) {
+      toast.error("Please enter a valid Malaysian phone number (e.g. +60123456789 or 0123456789).");
+      return;
+    }
+    
+    const updates = {
+      full_name: fullName,
+      gender: gender,
+      phone_number: phoneNumber,
+      vehicle_model: vehicleModel,
+      vehicle_color: vehicleColor,
+      vehicle_plate: vehiclePlate,
+    };
+
+    const { error } = await supabase
+      .from("profiles")
+      .update(updates)
+      .eq("id", profileId);
+
+    if (error) {
+      console.error(error);
+      toast.error("Failed to update profile to Supabase. Check if columns exist.");
+    } else {
+      toast.success("Changes saved successfully to database!");
+    }
+
+    // Fallback to local storage for vehicle details if columns might not exist
+    if (typeof window !== "undefined") {
+      localStorage.setItem("campusride_vehicle_model", vehicleModel);
+      localStorage.setItem("campusride_vehicle_color", vehicleColor);
+      localStorage.setItem("campusride_vehicle_plate", vehiclePlate);
+    }
+    
+    setIsEditing(false);
+    setHasChanges(false);
+  };
+
   const actionButtonsJsx = (
     <div className="flex items-center gap-3 mt-6">
       {!isEditing ? (
@@ -80,11 +155,7 @@ export default function ProfilePage() {
           {hasChanges && (
             <Button
               className="rounded-xl"
-              onClick={() => {
-                toast.success("Changes saved successfully");
-                setIsEditing(false);
-                setHasChanges(false);
-              }}
+              onClick={saveProfile}
             >
               Save changes
             </Button>
@@ -147,20 +218,37 @@ export default function ProfilePage() {
               <Card>
                 <CardHeader>
                   <CardTitle>Account</CardTitle>
-                  <CardDescription>Basic identity pulled from the session store.</CardDescription>
+                  <CardDescription>Basic identity from the database.</CardDescription>
                 </CardHeader>
                 <CardContent className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Full name</Label>
-                    <Input defaultValue={user.name} className="rounded-xl" readOnly={!isEditing} onChange={handleInputChange} />
+                    <Input value={fullName} onChange={(e) => { setFullName(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>University email</Label>
-                    <Input defaultValue={user.email} className="rounded-xl" readOnly />
+                    <Input value={email} className="rounded-xl" readOnly />
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Faculty</Label>
-                    <Input defaultValue={user.faculty} className="rounded-xl" readOnly={!isEditing} onChange={handleInputChange} />
+                    <Input value={faculty} onChange={(e) => { setFaculty(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Gender</Label>
+                    <Select disabled={!isEditing} value={gender} onValueChange={(val) => { setGender(val); handleInputChange(); }}>
+                      <SelectTrigger className="rounded-xl">
+                        <SelectValue placeholder="Select gender" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Male">Male</SelectItem>
+                        <SelectItem value="Female">Female</SelectItem>
+                        <SelectItem value="Prefer not to say">Prefer not to say</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2 sm:col-span-2">
+                    <Label>Phone Number</Label>
+                    <Input placeholder="+60123456789" value={phoneNumber} onChange={(e) => { setPhoneNumber(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
                   </div>
                 </CardContent>
               </Card>
@@ -189,20 +277,20 @@ export default function ProfilePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle>Vehicle information</CardTitle>
-                    <CardDescription>Used when you post offers — verification flow comes later.</CardDescription>
+                    <CardDescription>Used when you post offers. Information synced with Supabase.</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label>Model</Label>
-                      <Input defaultValue="Perodua Myvi" className="rounded-xl" readOnly={!isEditing} onChange={handleInputChange} />
+                      <Input value={vehicleModel} onChange={(e) => { setVehicleModel(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
                     </div>
                     <div className="space-y-2">
                       <Label>Colour</Label>
-                      <Input defaultValue="Midnight blue" className="rounded-xl" readOnly={!isEditing} onChange={handleInputChange} />
+                      <Input value={vehicleColor} onChange={(e) => { setVehicleColor(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
                     </div>
                     <div className="space-y-2 sm:col-span-2">
                       <Label>Plate</Label>
-                      <Input defaultValue="ABC 1234" className="rounded-xl" readOnly={!isEditing} onChange={handleInputChange} />
+                      <Input value={vehiclePlate} onChange={(e) => { setVehiclePlate(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
                     </div>
                   </CardContent>
                 </Card>
@@ -368,7 +456,7 @@ export default function ProfilePage() {
                 <CardHeader>
                   <CardTitle className="text-base">Average rating</CardTitle>
                 </CardHeader>
-                <CardContent className="text-3xl font-semibold">{user.rating.toFixed(1)}</CardContent>
+                <CardContent className="text-3xl font-semibold">{user.rating?.toFixed(1) || "5.0"}</CardContent>
               </Card>
             </div>
           </TabsContent>
@@ -377,4 +465,3 @@ export default function ProfilePage() {
     </div>
   );
 }
-

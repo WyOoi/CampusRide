@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState, useEffect } from "react";
+import { useRouter, useParams } from "next/navigation";
 import { toast } from "sonner"; 
 import { PageHeader } from "@/components/common/page-header";
 import { Input } from "@/components/ui/input";
@@ -16,18 +17,27 @@ import { supabase } from "@/lib/supabase";
 
 
 export default function FindRidePage() {
+  const router = useRouter();
+  const params = useParams<{ role: string }>();
   const [q, setQ] = useState("");
   const [status, setStatus] = useState<RideStatus | "all">("all");
 const [rides, setRides] = useState<any[]>([]);
 const [loading, setLoading] = useState(true);
+const [currentUserGender, setCurrentUserGender] = useState<string>("Prefer not to say");
 
 useEffect(() => {
   const loadRides = async () => {
     setLoading(true);
 
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from("profiles").select("gender").eq("id", user.id).single();
+      if (profile && profile.gender) setCurrentUserGender(profile.gender);
+    }
+
     const { data, error } = await supabase
       .from("rides")
-      .select("*")
+      .select("*, driver:profiles!driver_id(*)")
       .eq("status", "active")
       .order("departure_time", { ascending: true });
       console.log("RIDES:", data);
@@ -47,6 +57,11 @@ useEffect(() => {
 }, []);
 const filtered = useMemo(() => {
   return rides.filter((r) => {
+    if (r.gender_preference && r.gender_preference !== "Any") {
+      if (r.gender_preference === "Male Only" && currentUserGender !== "Male") return false;
+      if (r.gender_preference === "Female Only" && currentUserGender !== "Female") return false;
+    }
+
     return (
       !q ||
       `${r.pickup_location} ${r.destination}`
@@ -54,7 +69,7 @@ const filtered = useMemo(() => {
         .includes(q.toLowerCase())
     );
   });
-}, [rides, q]);
+}, [rides, q, currentUserGender]);
 const handleBookRide = async (ride: any) => {
   try {
     const { data: userData } =
@@ -71,17 +86,18 @@ const handleBookRide = async (ride: any) => {
       toast.error("No seats available");
       return;
     }
-const { data: existingBooking } = await supabase
-  .from("bookings")
-  .select("*")
-  .eq("passenger_id", user.id)
-  .eq("booking_status", "pending")
-  .maybeSingle();
+    const { data: activeBookings } = await supabase
+      .from("bookings")
+      .select("*, rides!inner(status)")
+      .eq("passenger_id", user.id)
+      .in("booking_status", ["pending", "confirmed"])
+      .eq("rides.status", "active")
+      .limit(1);
 
-if (existingBooking) {
-  toast.error("You already have an active booking");
-  return;
-}
+    if (activeBookings && activeBookings.length > 0) {
+      toast.error("You already have an active booking");
+      return;
+    }
 const { data: duplicateBooking } = await supabase
   .from("bookings")
   .select("*")
@@ -108,14 +124,14 @@ if (ride.driver_id === user.id) {
       });
 
     if (error) throw error;
-await supabase
-  .from("alerts")
-  .insert({
-    user_id: ride.driver_id,
-    title: "New Booking",
-    message: `A passenger has booked your ride from ${ride.pickup_location} to ${ride.destination}.`,
-    is_read: false,
-  });
+    await supabase
+      .from("alerts")
+      .insert({
+        user_id: ride.driver_id,
+        title: "New Booking",
+        message: `A passenger has booked your ride from ${ride.pickup_location} to ${ride.destination.replace(/\[[^\]]+\]/g, "").trim()}.`,
+        is_read: false,
+      });
     await supabase
       .from("rides")
       .update({
@@ -126,7 +142,7 @@ await supabase
 
     toast.success("Ride booked successfully");
 
-    window.location.reload();
+    router.push(`/${params.role}/orders`);
   } catch (error: any) {
     toast.error(error.message);
   }
@@ -195,8 +211,13 @@ await supabase
     {filtered.map((ride) => (
       <Card key={ride.id}>
         <CardContent className="p-4 space-y-2">
-          <h3 className="font-semibold">
-            {ride.pickup_location} → {ride.destination}
+          <h3 className="font-semibold flex items-center gap-2 flex-wrap">
+            <span>{ride.pickup_location} → {ride.destination}</span>
+            {ride.gender_preference && ride.gender_preference !== "Any" && (
+              <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
+                {ride.gender_preference}
+              </span>
+            )}
           </h3>
 
           <p>
@@ -211,6 +232,17 @@ await supabase
 <p>
   Cost: RM {ride.cost_per_person}
 </p>
+
+{ride.driver && (
+  <div className="mt-3 p-2 bg-muted/40 rounded-lg text-sm flex justify-between items-center">
+    <span className="font-medium text-foreground">Driver: {ride.driver.full_name || "Unknown"}</span>
+    {ride.driver.gender && ride.driver.gender !== "Prefer not to say" && (
+      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold">
+        {ride.driver.gender}
+      </span>
+    )}
+  </div>
+)}
 
 <Button
   className="mt-3"

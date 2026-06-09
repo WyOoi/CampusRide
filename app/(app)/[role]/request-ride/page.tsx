@@ -27,6 +27,7 @@ export default function RequestRidePage() {
   const [distanceKm, setDistanceKm] = useState(12.4);
   const [isExpanded, setIsExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [genderPreference, setGenderPreference] = useState("Any");
 
   const router = useRouter();
   const params = useParams<{ role: string }>();
@@ -52,20 +53,15 @@ export default function RequestRidePage() {
       
       const { data: activeBookings } = await supabase
         .from("bookings")
-        .select("id, rides(status)")
+        .select("id, rides!inner(status)")
         .eq("passenger_id", user.id)
         .in("booking_status", ["pending", "confirmed"])
+        .eq("rides.status", "active")
         .limit(1);
         
       if (activeBookings && activeBookings.length > 0) {
-        const rides: any = activeBookings[0].rides;
-        const isCompleted = Array.isArray(rides) 
-          ? rides.some((r: any) => r.status === "completed" || r.status === "closed")
-          : rides?.status === "completed" || rides?.status === "closed";
-        if (!isCompleted) {
-            toast.info("You already have an active booking.");
-            router.push(`/${params.role}/orders`);
-        }
+        toast.info("You already have an active booking.");
+        router.push(`/${params.role}/orders`);
       }
     };
     checkActiveRequests();
@@ -135,6 +131,16 @@ export default function RequestRidePage() {
     try {
       setLoading(true);
 
+      if (!pickupLocation || !destination) {
+        toast.error("Please specify pickup and destination locations");
+        return;
+      }
+
+      if (!departureTime) {
+        toast.error("Please specify a departure date and time");
+        return;
+      }
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -164,6 +170,7 @@ export default function RequestRidePage() {
         destination: finalDestination,
         departure_time: departureTime,
         seats_needed: seats,
+        gender_preference: genderPreference,
         status: "open",
       });
 
@@ -171,10 +178,9 @@ export default function RequestRidePage() {
       toast.success("Ride request submitted");
 
       router.push(`/${params.role}/orders`);
-    } catch (error) {
-      const err = error as Error;
-      console.error(err);
-      toast.error(err.message);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || "An error occurred while submitting your request");
     } finally {
       setLoading(false);
     }
@@ -324,6 +330,20 @@ export default function RequestRidePage() {
                 <SelectContent>
                   <SelectItem value="cash">Cash</SelectItem>
                   <SelectItem value="tng">Touch 'n Go eWallet</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="gender-preference">Driver Gender Preference</Label>
+              <Select value={genderPreference} onValueChange={setGenderPreference}>
+                <SelectTrigger id="gender-preference" className="rounded-xl">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any</SelectItem>
+                  <SelectItem value="Male Only">Male Only</SelectItem>
+                  <SelectItem value="Female Only">Female Only</SelectItem>
                 </SelectContent>
               </Select>
             </div>

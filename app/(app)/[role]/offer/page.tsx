@@ -28,13 +28,18 @@ export default function OfferRidePage() {
   const [distanceKm, setDistanceKm] = useState(12.4);
   const [isExpanded, setIsExpanded] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cash");
+  const [genderPreference, setGenderPreference] = useState("Any");
+
+  const [vehicleModel, setVehicleModel] = useState("Perodua Myvi");
+  const [vehiclePlate, setVehiclePlate] = useState("ABC 1234");
+  const [vehicleColor, setVehicleColor] = useState("");
 
   const router = useRouter();
   const params = useParams<{ role: string }>();
 
-  // Check for active rides
+  // Check for active rides and load user profile (vehicle info)
   useEffect(() => {
-    const checkActiveRide = async () => {
+    const checkActiveRideAndProfile = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
@@ -49,8 +54,35 @@ export default function OfferRidePage() {
         toast.info("You already have an active ride.");
         router.push(`/${params.role}/orders`);
       }
+
+      // Load profile for vehicle
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      
+      let profileHasVehicle = false;
+      if (profile) {
+        if (profile.vehicle_model) {
+          setVehicleModel(profile.vehicle_model);
+          profileHasVehicle = true;
+        }
+        if (profile.vehicle_plate) setVehiclePlate(profile.vehicle_plate);
+        if (profile.vehicle_color) setVehicleColor(profile.vehicle_color);
+      }
+
+      // Fallback to localStorage if not in DB yet
+      if (!profileHasVehicle && typeof window !== "undefined") {
+        const storedModel = localStorage.getItem("campusride_vehicle_model");
+        const storedPlate = localStorage.getItem("campusride_vehicle_plate");
+        const storedColor = localStorage.getItem("campusride_vehicle_color");
+        if (storedModel) setVehicleModel(storedModel);
+        if (storedPlate) setVehiclePlate(storedPlate);
+        if (storedColor) setVehicleColor(storedColor);
+      }
     };
-    checkActiveRide();
+    checkActiveRideAndProfile();
   }, [router, params.role]);
 
   // Automatically calculate suggested cost per seat based on the real road distance
@@ -147,6 +179,11 @@ export default function OfferRidePage() {
         }
       }
 
+      // Encode vehicle information in notes/destination if the DB lacks columns for it, or just ignore for now as per instructions it might be linked via profile.
+      // But we will pass it in destination for the passengers to see if necessary.
+      const vehicleInfo = ` [vehicle:${vehicleModel}|${vehiclePlate}]`;
+      finalDestination += vehicleInfo;
+
       const { error } = await supabase.from("rides").insert({
         driver_id: user.id,
         pickup_location: pickupLocation,
@@ -154,6 +191,7 @@ export default function OfferRidePage() {
         departure_time: departureTime,
         available_seats: seats,
         cost_per_person: costPerPerson,
+        gender_preference: genderPreference,
         status: "active",
       });
 
@@ -330,6 +368,20 @@ export default function OfferRidePage() {
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2 sm:col-span-2">
+              <Label htmlFor="gender-preference">Passenger Gender Preference</Label>
+              <Select value={genderPreference} onValueChange={setGenderPreference}>
+                <SelectTrigger id="gender-preference" className="rounded-xl">
+                  <SelectValue placeholder="Any" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Any">Any</SelectItem>
+                  <SelectItem value="Male Only">Male Only</SelectItem>
+                  <SelectItem value="Female Only">Female Only</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <Separator />
@@ -337,11 +389,21 @@ export default function OfferRidePage() {
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-2">
               <Label htmlFor="vehicle">Vehicle model</Label>
-              <Input id="vehicle" defaultValue="Perodua Myvi" className="rounded-xl" />
+              <Input 
+                id="vehicle" 
+                value={vehicleModel} 
+                onChange={(e) => setVehicleModel(e.target.value)} 
+                className="rounded-xl" 
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="plate">Plate number</Label>
-              <Input id="plate" defaultValue="WXY 1234" className="rounded-xl" />
+              <Input 
+                id="plate" 
+                value={vehiclePlate} 
+                onChange={(e) => setVehiclePlate(e.target.value)} 
+                className="rounded-xl" 
+              />
             </div>
           </div>
 

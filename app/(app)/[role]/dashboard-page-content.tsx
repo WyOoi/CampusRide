@@ -5,9 +5,7 @@ import { motion } from "framer-motion";
 import {
   CarFront,
   ClipboardList,
-  Plus,
   Search,
-  Sparkles,
   LogOut,
   Car,
   Wallet,
@@ -16,13 +14,8 @@ import {
 } from "lucide-react";
 import { useSessionStore } from "@/store/session-store";
 
-import { PageHeader } from "@/components/common/page-header";
-import { MotionCard } from "@/components/common/motion-card";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { formatRelative } from "@/utils/format";
 import type { UserRole } from "@/types";
 import { useEffect, useState } from "react";
@@ -42,18 +35,19 @@ export function parseRideDestination(destStr: string) {
   return { destination: cleanDest, paymentMethod, rideState };
 }
 
-
 export default function DashboardPage() {
   const { activeRole, setActiveRole } = useSessionStore();
   const router = useRouter();
   const params = useParams<{ role: string }>();
-const handleLogout = async () => {
-  if (typeof window !== "undefined") {
-    sessionStorage.removeItem("isAdmin");
-  }
-  await supabase.auth.signOut();
-  router.push("/login");
-};
+  
+  const handleLogout = async () => {
+    if (typeof window !== "undefined") {
+      sessionStorage.removeItem("isAdmin");
+    }
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   const [fullName, setFullName] = useState("Student");
   const [email, setEmail] = useState("");
   const [role, setRole] = useState("");
@@ -72,493 +66,307 @@ const handleLogout = async () => {
     driverRides: [],
     driverRequests: [],
   });
-useEffect(() => {
-  const loadUser = async () => {
-    const {
-      data: { user },
-    } = await supabase.auth.getUser();
 
-    console.log("AUTH USER:", user);
+  useEffect(() => {
+    const loadUser = async () => {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-    if (!user) {
-      if (typeof window !== "undefined" && sessionStorage.getItem("isAdmin") === "true") {
-        setFullName("Admin User");
-        setEmail("admin");
-        setRole("Admin");
+      if (!user) {
+        if (typeof window !== "undefined" && sessionStorage.getItem("isAdmin") === "true") {
+          setFullName("Admin User");
+          setEmail("admin");
+          setRole("Admin");
+          return;
+        }
+        router.push("/login");
         return;
       }
-      router.push("/login");
-      return;
-    }
 
-    const { data: profile, error } = await supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    console.log("PROFILE:", profile);
-    console.log("PROFILE ERROR:", error);
-
-    if (profile) {
-      setFullName(profile.full_name);
-      setEmail(profile.email);
-setRole(
-  profile.role.charAt(0).toUpperCase() +
-  profile.role.slice(1)
-);
-    }
-
-    const { data: alertsData } = await supabase
-      .from("alerts")
-      .select("*")
-      .eq("user_id", user.id)
-      .order("created_at", { ascending: false })
-      .limit(4);
-    if (alertsData) setAlerts(alertsData);
-
-    // Fetch Ongoing Data
-    try {
-      // Passenger data
-      const { data: activeBookings } = await supabase
-        .from("bookings")
-        .select(`*, rides (*)`)
-        .eq("passenger_id", user.id)
-        .in("booking_status", ["pending", "confirmed"])
-        .order("created_at", { ascending: false });
-
-      const ongoingPassengerBookings = (activeBookings || []).filter((b: any) => {
-        const destStr = b.rides?.destination || "";
-        return destStr.includes("[ride_state:in_progress]");
-      });
-
-      const pendingPaymentPassengerBookings = (activeBookings || []).filter((b: any) => {
-        const isCompleted = b.rides?.status === "completed" || b.rides?.status === "closed";
-        return isCompleted && b.booking_status === "confirmed";
-      });
-
-      const { data: activeReqs } = await supabase
-        .from("ride_requests")
+      const { data: profile } = await supabase
+        .from("profiles")
         .select("*")
-        .eq("passenger_id", user.id)
-        .in("status", ["open", "accepted"]);
+        .eq("id", user.id)
+        .single();
 
-      const ongoingPassengerRequests = (activeReqs || []).filter((r: any) => {
-        return r.destination?.includes("[ride_state:in_progress]");
-      });
+      if (profile) {
+        setFullName(profile.full_name);
+        setEmail(profile.email);
+        setRole(
+          profile.role.charAt(0).toUpperCase() +
+          profile.role.slice(1)
+        );
+      }
 
-      // Driver data
-      const { data: activeRides } = await supabase
-        .from("rides")
+      const { data: alertsData } = await supabase
+        .from("alerts")
         .select("*")
-        .eq("driver_id", user.id)
-        .eq("status", "active");
+        .eq("user_id", user.id)
+        .order("created_at", { ascending: false })
+        .limit(4);
+      if (alertsData) setAlerts(alertsData);
 
-      const ongoingDriverRides = (activeRides || []).filter((r: any) => {
-        return r.destination?.includes("[ride_state:in_progress]");
-      });
+      try {
+        // Passenger data
+        const { data: activeBookings } = await supabase
+          .from("bookings")
+          .select(`*, rides (*)`)
+          .eq("passenger_id", user.id)
+          .in("booking_status", ["pending", "confirmed"])
+          .order("created_at", { ascending: false });
 
-      const { data: driverReqs } = await supabase
-        .from("ride_requests")
-        .select("*")
-        .eq("accepted_driver_id", user.id)
-        .eq("status", "accepted");
+        const ongoingPassengerBookings = (activeBookings || []).filter((b: any) => {
+          const destStr = b.rides?.destination || "";
+          return destStr.includes("[ride_state:in_progress]");
+        });
 
-      const ongoingDriverRequests = (driverReqs || []).filter((r: any) => {
-        return r.destination?.includes("[ride_state:in_progress]");
-      });
+        const pendingPaymentPassengerBookings = (activeBookings || []).filter((b: any) => {
+          const isCompleted = b.rides?.status === "completed" || b.rides?.status === "closed";
+          return isCompleted && b.booking_status === "confirmed";
+        });
 
-      setOngoingData({
-        passengerBookings: ongoingPassengerBookings,
-        passengerRequests: ongoingPassengerRequests,
-        pendingPaymentPassengerBookings: pendingPaymentPassengerBookings,
-        driverRides: ongoingDriverRides,
-        driverRequests: ongoingDriverRequests
-      });
-    } catch (e) {
-      console.error(e);
-    }
-    
-    const channel = supabase
-      .channel(`dashboard-alerts-${Date.now()}-${Math.random()}`)
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "alerts" },
-        (payload) => {
-          if ((payload.new as any).user_id === user.id) {
-            setAlerts((prev) => {
-              const newAlert = payload.new as any;
-              if (prev.some(a => a.id === newAlert.id)) return prev;
-              return [newAlert, ...prev].slice(0, 4);
-            });
-          }
-        }
-      )
-      .subscribe();
+        const { data: activeReqs } = await supabase
+          .from("ride_requests")
+          .select("*")
+          .eq("passenger_id", user.id)
+          .in("status", ["open", "accepted"]);
+
+        const ongoingPassengerRequests = (activeReqs || []).filter((r: any) => {
+          return r.destination?.includes("[ride_state:in_progress]");
+        });
+
+        // Driver data
+        const { data: activeRides } = await supabase
+          .from("rides")
+          .select("*")
+          .eq("driver_id", user.id)
+          .eq("status", "active");
+
+        const ongoingDriverRides = (activeRides || []).filter((r: any) => {
+          return r.destination?.includes("[ride_state:in_progress]");
+        });
+
+        const { data: driverReqs } = await supabase
+          .from("ride_requests")
+          .select("*")
+          .eq("accepted_driver_id", user.id)
+          .eq("status", "accepted");
+
+        const ongoingDriverRequests = (driverReqs || []).filter((r: any) => {
+          return r.destination?.includes("[ride_state:in_progress]");
+        });
+
+        setOngoingData({
+          passengerBookings: ongoingPassengerBookings,
+          passengerRequests: ongoingPassengerRequests,
+          pendingPaymentPassengerBookings: pendingPaymentPassengerBookings,
+          driverRides: ongoingDriverRides,
+          driverRequests: ongoingDriverRequests
+        });
+      } catch (e) {
+        console.error(e);
+      }
       
-    return channel;
-  };
+      const channel = supabase
+        .channel(`dashboard-alerts-${Date.now()}-${Math.random()}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "alerts" },
+          (payload) => {
+            if ((payload.new as any).user_id === user.id) {
+              setAlerts((prev) => {
+                const newAlert = payload.new as any;
+                if (prev.some(a => a.id === newAlert.id)) return prev;
+                return [newAlert, ...prev].slice(0, 4);
+              });
+            }
+          }
+        )
+        .subscribe();
+        
+      return channel;
+    };
 
-  let channel: any;
-  loadUser().then(ch => channel = ch);
-  return () => {
-    if (channel) supabase.removeChannel(channel);
-  };
-}, [router]);
+    let channel: any;
+    loadUser().then(ch => channel = ch);
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
+  }, [router]);
 
-  const renderPaymentBadge = (method: string) => {
-    switch (method) {
-      case "tng":
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
-            <Wallet className="h-3 w-3" /> TNG eWallet
-          </span>
-        );
-      default:
-        return (
-          <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
-            <Banknote className="h-3 w-3" /> Cash
-          </span>
-        );
-    }
-  };
-
+  const firstName = fullName.split(" ")[0];
   const hasOngoingPassenger = ongoingData.passengerBookings.length > 0 || ongoingData.passengerRequests.length > 0 || ongoingData.pendingPaymentPassengerBookings.length > 0;
   const hasOngoingDriver = ongoingData.driverRides.length > 0 || ongoingData.driverRequests.length > 0;
 
-  return (
-    <div className="space-y-8">
-      <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Hi {fullName.split(" ")[0]}</h1>
-          <p className="max-w-2xl text-sm text-muted-foreground sm:text-base">{email} • {role}</p>
+  const renderOngoingCard = (id: string, pickup: string, dropoff: string, statusText: string, seats: number, paymentMethod: string, currentRole: string) => (
+    <div key={id} className="flex flex-col gap-3 border border-gray-700/50 bg-[#1a1c23] p-4 rounded-2xl">
+      <div className="flex items-start justify-between gap-2">
+        <div>
+          <div className="flex items-center gap-2 mb-1.5">
+            <div className="bg-red-500/20 p-1.5 rounded-full shrink-0">
+              <Car className="text-red-500 animate-pulse" size={14} />
+            </div>
+            <h3 className="font-semibold text-white text-sm">Ongoing Active Trip</h3>
+          </div>
+          <p className="text-sm font-medium text-white">{pickup || "Unknown"} → {dropoff || "Unknown"}</p>
         </div>
-        
-        <div className="flex flex-col gap-4 sm:items-end">
-          <Button 
-            variant="destructive" 
-            size="icon" 
-            onClick={handleLogout} 
-            className="shrink-0 bg-red-600 hover:bg-red-700 text-white rounded-full h-10 w-10 shadow-sm self-end"
-            title="Logout"
-          >
-            <LogOut className="h-5 w-5" />
-            <span className="sr-only">Logout</span>
-          </Button>
-          <div className="flex flex-wrap gap-2">
-            <Button asChild variant="outline" className="rounded-xl">
-              <Link href="/orders">
-                <ClipboardList className="mr-2 h-4 w-4" />
-                Orders
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" className="rounded-xl">
-              <Link href="/find">
-                <Search className="mr-2 h-4 w-4" />
-                Find ride
-              </Link>
-            </Button>
-            {params?.role === "passenger" ? (
-              <Button asChild className="rounded-xl">
-                <Link href="/passenger/request-ride">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Request ride
-                </Link>
-              </Button>
-            ) : (
-              <Button asChild className="rounded-xl">
-                <Link href="/offer">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Offer ride
-                </Link>
-              </Button>
-            )}
+        <Badge variant="outline" className="bg-red-500/10 text-red-500 border-red-500/20 whitespace-nowrap text-[10px]">
+          {statusText}
+        </Badge>
+      </div>
+      
+      <div className="grid grid-cols-2 gap-2 text-xs text-gray-400 mt-1">
+        <div>
+          <p>Passenger Seats:</p>
+          <p className="font-medium text-white">{seats || 1}</p>
+        </div>
+        <div>
+          <p>Payment:</p>
+          <div className="flex items-center gap-1 mt-0.5">
+            <Wallet className="h-3 w-3" />
+            <span className="font-medium text-white capitalize">{paymentMethod}</span>
           </div>
         </div>
       </div>
-      {role.toLowerCase() === "both" && (
-        <MotionCard>
-        <Card className="overflow-hidden rounded-2xl border-primary/20 bg-gradient-to-br from-primary/10 via-card to-card">
-          <CardContent className="flex flex-col gap-4 p-6 sm:flex-row sm:items-center sm:justify-between">
-            <div className="space-y-2">
-              <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-primary">
-                <Sparkles className="h-4 w-4" />
-                Role selection (Zustand)
-              </div>
-              <p className="text-lg font-semibold tracking-tight">How are you commuting today?</p>
-              <p className="max-w-2xl text-sm text-muted-foreground">
-                Switch modes to tailor quick actions. This is local UI state only — wire it to your auth service later.
-              </p>
-              <Tabs
-                value={activeRole === "both" ? "passenger" : activeRole}
-                onValueChange={(v) => setActiveRole(v as UserRole)}
-                className="w-full max-w-md"
-              >
-                <TabsList className="grid w-full grid-cols-2 rounded-xl">
-                  <TabsTrigger value="passenger" className="rounded-lg">
-                    Passenger
-                  </TabsTrigger>
-                  <TabsTrigger value="driver" className="rounded-lg">
-                    Driver
-                  </TabsTrigger>
-                </TabsList>
-              </Tabs>
-            </div>
-            <motion.div
-              key={activeRole}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="flex items-center gap-3 rounded-2xl border border-border bg-background/70 p-4 shadow-sm"
-            >
-              <div className="grid h-12 w-12 place-items-center rounded-2xl bg-primary/10 text-primary">
-                <CarFront className="h-6 w-6" />
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold">{activeRole === "driver" ? "Driver mode" : "Passenger mode"}</p>
-                <p className="text-muted-foreground">
-                  {activeRole === "driver"
-                    ? "You’ll see offer-first CTAs and vehicle reminders."
-                    : "You’ll see match-first CTAs and seat guarantees (mock)."}
-                </p>
-              </div>
-            </motion.div>
-          </CardContent>
-        </Card>
-        </MotionCard>
-      )}
 
-      <div className="grid gap-6 md:grid-cols-2">
-        <div className="space-y-4">
-          {params?.role === "passenger" ? (
-            hasOngoingPassenger ? (
-              <div className="space-y-4 rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-md">
-                <h2 className="text-base font-bold tracking-tight text-primary flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-[#ff3b30] animate-ping" />
-                  Ongoing Trip Details
-                </h2>
-                
-                <div className="grid gap-4">
-                  {ongoingData.passengerBookings.map((booking) => {
-                    const { destination, paymentMethod } = parseRideDestination(booking.rides?.destination);
-                    return (
-                      <Card key={booking.id} className="overflow-hidden border border-primary/20 bg-card/90">
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-base leading-tight">
-                              {booking.rides?.pickup_location} → {destination}
-                            </h3>
-                            <span className="inline-flex items-center rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-500">
-                              In Transit
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>Driver: <span className="font-medium text-foreground">Active CampusRide Driver</span></p>
-                            <p>Vehicle: <span className="font-medium text-foreground">Perodua Myvi (WXY 1234)</span></p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span>Payment:</span>
-                              {renderPaymentBadge(paymentMethod)}
-                            </div>
-                          </div>
-                          <Button asChild className="w-full rounded-xl gap-2">
-                            <Link href={`/passenger/tracking/r5`}>
-                              <Car className="h-4 w-4 animate-pulse" /> Track Live Ride
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-  
-                  {ongoingData.passengerRequests.map((request) => {
-                    const { destination, paymentMethod } = parseRideDestination(request.destination);
-                    return (
-                      <Card key={request.id} className="overflow-hidden border border-primary/20 bg-card/90">
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-base leading-tight">
-                              {request.pickup_location} → {destination}
-                            </h3>
-                            <span className="inline-flex items-center rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-500">
-                              In Transit
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>Seats: <span className="font-medium text-foreground">{request.seats_needed}</span></p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span>Payment:</span>
-                              {renderPaymentBadge(paymentMethod)}
-                            </div>
-                          </div>
-                          <Button asChild className="w-full rounded-xl gap-2">
-                            <Link href={`/passenger/tracking/r5`}>
-                              <Car className="h-4 w-4" /> Track Live Request
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-  
-                  {ongoingData.pendingPaymentPassengerBookings.map((booking) => {
-                    const { destination, paymentMethod } = parseRideDestination(booking.rides?.destination);
-                    return (
-                      <Card key={booking.id} className="overflow-hidden border-2 border-amber-500/40 bg-card/90">
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-base leading-tight">
-                              {booking.rides?.pickup_location} → {destination}
-                            </h3>
-                            <span className="inline-flex items-center rounded-full bg-amber-500/15 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
-                              Payment Pending
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>Driver: <span className="font-medium text-foreground">Active CampusRide Driver</span></p>
-                            <p>Total Fare: <span className="font-semibold text-foreground">RM {booking.rides?.cost_per_person.toFixed(2)}</span></p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span>Payment Type:</span>
-                              {renderPaymentBadge(paymentMethod)}
-                            </div>
-                          </div>
-                          {paymentMethod === "cash" ? (
-                            <div className="text-xs bg-muted p-3 rounded-xl border border-border text-muted-foreground text-center">
-                              Please pay <span className="font-bold text-foreground">RM {booking.rides?.cost_per_person}</span> in Cash directly to the driver.
-                            </div>
-                          ) : (
-                            <Button asChild
-                              className="w-full rounded-xl bg-amber-500 hover:bg-amber-600 text-white font-semibold flex items-center justify-center gap-2 shadow-sm"
-                            >
-                              <Link href={`/passenger/orders`}>
-                                <ShieldCheck className="h-4 w-4" /> Pay RM {booking.rides?.cost_per_person} Now
-                              </Link>
-                            </Button>
-                          )}
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+      <Button asChild size="sm" className="w-full mt-1 rounded-xl bg-white text-black hover:bg-gray-200">
+        <Link href={`/${currentRole}/orders`}>View details</Link>
+      </Button>
+    </div>
+  );
+
+  return (
+    <div className="space-y-8 pb-8 text-white w-full max-w-5xl mx-auto">
+      {/* Header Banner */}
+      <div className="bg-[#12141c] border border-gray-800 rounded-[2rem] p-6 md:p-8 flex justify-between items-start">
+        <div>
+          <h1 className={`text-2xl md:text-3xl font-bold mb-1 text-cyan-400 shadow-cyan-500/20 drop-shadow-[0_0_12px_rgba(34,211,238,0.3)]`}>
+            Good afternoon, {firstName} 👋
+          </h1>
+          <p className="text-sm md:text-base opacity-90 text-gray-400 font-medium">{role || (params?.role ? params.role.charAt(0).toUpperCase() + params.role.slice(1) : "")}</p>
+        </div>
+        <button 
+          onClick={handleLogout}
+          className="p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-cyan-400"
+          title="Logout"
+        >
+          <LogOut size={20} />
+        </button>
+      </div>
+
+      {/* Action Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Request/Offer Ride */}
+        <Link href={params?.role === "passenger" ? "/passenger/request-ride" : "/driver/offer"} className="block">
+          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
+            <div className="bg-[#1c2235] p-4 rounded-full mb-3">
+              <CarFront className="text-[#5B7BFB]" size={24} />
+            </div>
+            <span className="font-semibold text-white">
+              {params?.role === "passenger" ? "Request Ride" : "Offer Ride"}
+            </span>
+          </div>
+        </Link>
+
+        {/* Find Ride */}
+        <Link href="/find" className="block">
+          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
+            <div className="bg-[#2a261a] p-4 rounded-full mb-3">
+              <Search className="text-[#eab308]" size={24} />
+            </div>
+            <span className="font-semibold text-white">Find Ride</span>
+          </div>
+        </Link>
+
+        {/* My Orders */}
+        <Link href="/orders" className="block h-full">
+          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
+            <div className="flex items-center gap-4">
+              <div className="bg-[#2a2b36] p-4 rounded-full shrink-0">
+                <ClipboardList className="text-white" size={24} />
               </div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Ride activity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p className="text-muted-foreground">No active rides at the moment.</p>
-                </CardContent>
-              </Card>
-            )
+              <div>
+                <h3 className="font-semibold text-white mb-1">My Orders</h3>
+                <p className="text-xs text-gray-400">View your recent and upcoming trips</p>
+              </div>
+            </div>
+          </div>
+        </Link>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
+        {/* Active Trips Section */}
+        <div>
+          <h2 className="text-lg font-bold text-white mb-4">Active Trips</h2>
+          
+          {(params?.role === "passenger" ? hasOngoingPassenger : hasOngoingDriver) ? (
+            <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 space-y-4 h-[250px] overflow-y-auto">
+              {params?.role === "passenger" && (
+                <>
+                  {ongoingData.passengerBookings.map((b) => {
+                    const { destination, paymentMethod } = parseRideDestination(b.rides?.destination);
+                    return renderOngoingCard(b.id, b.rides?.pickup_location, destination, "In Transit", b.rides?.available_seats || 1, paymentMethod, "passenger");
+                  })}
+                  {ongoingData.passengerRequests.map((r) => {
+                    const { destination, paymentMethod } = parseRideDestination(r.destination);
+                    return renderOngoingCard(r.id, r.pickup_location, destination, "In Transit", r.seats_needed, paymentMethod, "passenger");
+                  })}
+                  {ongoingData.pendingPaymentPassengerBookings.map((b) => {
+                    const { destination, paymentMethod } = parseRideDestination(b.rides?.destination);
+                    return renderOngoingCard(b.id, b.rides?.pickup_location, destination, "Pending Payment", b.rides?.available_seats || 1, paymentMethod, "passenger");
+                  })}
+                </>
+              )}
+              {params?.role === "driver" && (
+                <>
+                  {ongoingData.driverRides.map((r) => {
+                    const { destination, paymentMethod } = parseRideDestination(r.destination);
+                    return renderOngoingCard(r.id, r.pickup_location, destination, "Driving", r.available_seats, paymentMethod, "driver");
+                  })}
+                  {ongoingData.driverRequests.map((r) => {
+                    const { destination, paymentMethod } = parseRideDestination(r.destination);
+                    return renderOngoingCard(r.id, r.pickup_location, destination, "Driving", r.seats_needed, paymentMethod, "driver");
+                  })}
+                </>
+              )}
+            </div>
           ) : (
-            hasOngoingDriver ? (
-              <div className="space-y-4 rounded-2xl border border-primary/20 bg-primary/5 p-6 shadow-md">
-                <h2 className="text-base font-bold tracking-tight text-primary flex items-center gap-2">
-                  <span className="h-3 w-3 rounded-full bg-[#ff3b30] animate-ping" />
-                  Ongoing Active Trip
-                </h2>
-                
-                <div className="grid gap-4">
-                  {ongoingData.driverRides.map((ride) => {
-                    const { destination, paymentMethod } = parseRideDestination(ride.destination);
-                    return (
-                      <Card key={ride.id} className="overflow-hidden border border-primary/20 bg-card/90">
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-base leading-tight">
-                              {ride.pickup_location} → {destination}
-                            </h3>
-                            <span className="inline-flex items-center rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-500">
-                              In Transit
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>Seats: <span className="font-medium text-foreground">{ride.available_seats} remaining</span></p>
-                            <p>Fare/Seat: <span className="font-semibold text-foreground">RM {ride.cost_per_person.toFixed(2)}</span></p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span>Accepted:</span>
-                              {renderPaymentBadge(paymentMethod)}
-                            </div>
-                          </div>
-                          <Button asChild className="w-full rounded-xl gap-2 bg-red-500 hover:bg-red-600 text-white shadow-sm">
-                            <Link href={`/driver/orders`}>
-                              Manage Ongoing Trip
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-  
-                  {ongoingData.driverRequests.map((request) => {
-                    const { destination, paymentMethod } = parseRideDestination(request.destination);
-                    return (
-                      <Card key={request.id} className="overflow-hidden border border-primary/20 bg-card/90">
-                        <CardContent className="p-5 space-y-4">
-                          <div className="flex justify-between items-start">
-                            <h3 className="font-semibold text-base leading-tight">
-                              {request.pickup_location} → {destination}
-                            </h3>
-                            <span className="inline-flex items-center rounded-full bg-red-500/15 px-2.5 py-0.5 text-xs font-semibold text-red-500">
-                              In Transit
-                            </span>
-                          </div>
-                          <div className="text-xs text-muted-foreground space-y-1">
-                            <p>Seats: <span className="font-medium text-foreground">{request.seats_needed} taken</span></p>
-                            <div className="flex items-center gap-2 mt-2">
-                              <span>Payment:</span>
-                              {renderPaymentBadge(paymentMethod)}
-                            </div>
-                          </div>
-                          <Button asChild className="w-full rounded-xl gap-2 bg-red-500 hover:bg-red-600 text-white shadow-sm">
-                            <Link href={`/driver/orders`}>
-                              Manage Ongoing Trip
-                            </Link>
-                          </Button>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
+            <div className="border border-dashed border-gray-700 rounded-3xl p-8 flex flex-col items-center justify-center text-center h-[200px]">
+              <div className="bg-[#2a2b36] p-4 rounded-full mb-4">
+                <CarFront className="text-gray-400" size={24} />
               </div>
-            ) : (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="text-base">Ride activity</CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3 text-sm">
-                  <p className="text-muted-foreground">No active rides at the moment.</p>
-                </CardContent>
-              </Card>
-            )
+              <h3 className="text-white font-semibold mb-2">No active trips</h3>
+              <p className="text-sm text-gray-400 max-w-[200px]">You don't have any ongoing rides. Ready to go somewhere?</p>
+            </div>
           )}
         </div>
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-3">
-            <CardTitle className="text-base">Notifications</CardTitle>
-            <Badge variant="outline" className="rounded-full">
-              {alerts.filter((n) => !n.is_read).length} new
-            </Badge>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {alerts.length === 0 ? (
-              <p className="text-sm text-muted-foreground text-center py-4">No recent notifications.</p>
-            ) : (
-              alerts.map((n, idx) => (
-                <div key={`${n.id}-${idx}`} className="rounded-2xl border border-border bg-muted/20 p-3">
-                  <div className="flex items-start justify-between gap-2">
-                    <p className="text-sm font-semibold">{n.title}</p>
-                    <span className="text-[11px] text-muted-foreground">{formatRelative(n.created_at)}</span>
-                  </div>
-                  <p className="mt-1 text-xs text-muted-foreground">{n.message}</p>
+        {/* Notifications Section */}
+        <div>
+          <h2 className="text-lg font-bold text-white mb-4">Notifications</h2>
+          <div className="bg-[#12141c] border border-gray-800 rounded-3xl flex flex-col overflow-hidden h-[200px]">
+            <div className="flex-1 p-6 flex flex-col items-center justify-center text-center border-b border-gray-800 overflow-y-auto">
+              {alerts.length === 0 ? (
+                <p className="text-sm text-gray-400">All caught up! No recent notifications.</p>
+              ) : (
+                <div className="space-y-3 w-full">
+                  {alerts.map((n, idx) => (
+                    <div key={n.id} className="text-left w-full border-b border-gray-800 pb-2">
+                      <p className="text-sm font-semibold text-white truncate">{n.title}</p>
+                      <p className="text-xs text-gray-400 truncate">{n.message}</p>
+                    </div>
+                  ))}
                 </div>
-              ))
-            )}
-            <Button asChild variant="secondary" className="w-full rounded-xl">
-              <Link href={`/${params?.role || "passenger"}/notifications`}>Open notification center</Link>
-            </Button>
-          </CardContent>
-        </Card>
+              )}
+            </div>
+            <Link href={`/${params?.role || "passenger"}/notifications`} className="block">
+              <div className="p-4 text-center cursor-pointer hover:bg-gray-800 transition-colors">
+                <span className="text-[#5B7BFB] text-sm font-semibold">View all notifications</span>
+              </div>
+            </Link>
+          </div>
+        </div>
       </div>
     </div>
   );

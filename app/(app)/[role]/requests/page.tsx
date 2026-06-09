@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { toast } from "sonner";
 import { useRouter, useParams } from "next/navigation";
@@ -70,6 +70,7 @@ export default function RequestsPage() {
   const [requests, setRequests] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [currentUserGender, setCurrentUserGender] = useState<string>("Prefer not to say");
 
   // Passenger state
   const [activeRequests, setActiveRequests] = useState<any[]>([]);
@@ -87,6 +88,9 @@ export default function RequestsPage() {
 
     if (!user) return;
     setUserId(user.id);
+
+    const { data: profile } = await supabase.from("profiles").select("gender").eq("id", user.id).single();
+    if (profile && profile.gender) setCurrentUserGender(profile.gender);
 
     loadRequests(user.id);
   };
@@ -159,10 +163,24 @@ export default function RequestsPage() {
 
       toast.success("Ride request accepted");
       loadRequests(userId);
+      router.push(`/${role}/orders`);
     } catch (error: any) {
       toast.error(error?.message || "Unknown error");
     }
   };
+
+  // Driver Render (Find Requests)
+  const filteredRequests = useMemo(() => {
+    return requests.filter((request) => {
+      if (request.gender_preference && request.gender_preference !== "Any") {
+        if (request.gender_preference === "Male Only" && currentUserGender !== "Male") return false;
+        if (request.gender_preference === "Female Only" && currentUserGender !== "Female") return false;
+      }
+      return `${request.pickup_location} ${request.destination}`
+        .toLowerCase()
+        .includes(search.toLowerCase());
+    });
+  }, [requests, search, currentUserGender]);
 
   if (role === "passenger") {
     return (
@@ -180,12 +198,7 @@ export default function RequestsPage() {
     );
   }
 
-  // Driver Render (Find Requests)
-  const filteredRequests = requests.filter((request) =>
-    `${request.pickup_location} ${request.destination}`
-      .toLowerCase()
-      .includes(search.toLowerCase())
-  );
+
 
   return (
     <div className="space-y-8">
@@ -240,8 +253,13 @@ export default function RequestsPage() {
               <Card key={request.id} className="overflow-hidden border border-border bg-card">
                 <CardContent className="p-5 space-y-3">
                   <div className="flex justify-between items-start">
-                    <h3 className="font-semibold text-base leading-tight text-foreground">
-                      {request.pickup_location} → {destination}
+                    <h3 className="font-semibold text-base leading-tight text-foreground flex items-center gap-2 flex-wrap">
+                      <span>{request.pickup_location} → {destination}</span>
+                      {request.gender_preference && request.gender_preference !== "Any" && (
+                        <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
+                          {request.gender_preference}
+                        </span>
+                      )}
                     </h3>
                     {paymentMethod === "tng" && (
                       <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-[10px] font-semibold text-blue-500 uppercase">

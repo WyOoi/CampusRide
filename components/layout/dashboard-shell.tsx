@@ -40,44 +40,7 @@ const [userId, setUserId] = useState<string | null>(null);
 const [role, setRole] = useState<string | null>(null);
 const [hasActiveRequest, setHasActiveRequest] =
   useState(false);
-  useEffect(() => {
-    const channel = supabase
-      .channel("global-alerts")
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "alerts",
-        },
-        async (payload) => {
-          const audio = new Audio("/sounds/notification.mp3");
-          audio.play().catch(console.error);
 
-if (
-  userId &&
-  (payload.new as any).user_id === userId
-) {
-  setUnreadCount((prev) => prev + 1);
-
-
-toast(
-  (payload.new as any).title || "New Notification",
-  {
-    description:
-      (payload.new as any).message || "",
-
-  }
-);
-}
-        },
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [userId]);
 const loadUnreadCount = async () => {
   const {
     data: { user },
@@ -326,6 +289,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
   const [role, setRole] = useState<string | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
 
   useEffect(() => {
     const checkRole = async () => {
@@ -341,6 +305,8 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         router.push("/login");
         return;
       }
+      
+      setUserId(user.id);
 
       const { data } = await supabase
         .from("profiles")
@@ -353,6 +319,44 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
 
     checkRole();
   }, [router]);
+
+  useEffect(() => {
+    if (!userId) return;
+    
+    const channel = supabase
+      .channel("global-alerts")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "alerts",
+        },
+        async (payload) => {
+          if ((payload.new as any).user_id === userId) {
+            const audio = new Audio("/sounds/notification.mp3");
+            audio.play().catch(() => { /* Ignore autoplay errors if user hasn't interacted yet */ });
+            
+            // Dispatch a custom event to update unread counts globally if needed
+            if (typeof window !== "undefined") {
+              window.dispatchEvent(new Event("notifications-read"));
+            }
+            
+            toast(
+              (payload.new as any).title || "New Notification",
+              {
+                description: (payload.new as any).message || "",
+              }
+            );
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [userId]);
 
   useEffect(() => {
     if (!role) return;

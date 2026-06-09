@@ -24,7 +24,8 @@ import {
   ArrowRight,
   ShieldCheck,
   User,
-  Car
+  Car,
+  Phone
 } from "lucide-react";
 
 // Helper to parse payment method and ride state out of the destination string
@@ -96,7 +97,7 @@ export default function OrdersPage() {
           .from("bookings")
           .select(`
             *,
-            rides (*)
+            rides (*, driver:profiles!driver_id(*))
           `)
           .eq("passenger_id", user.id)
           .in("booking_status", ["pending", "confirmed"])
@@ -110,7 +111,7 @@ export default function OrdersPage() {
           .from("bookings")
           .select(`
             *,
-            rides (*)
+            rides (*, driver:profiles!driver_id(*))
           `)
           .eq("passenger_id", user.id)
           .in("booking_status", ["completed", "cancelled", "cancelled_by_driver"])
@@ -128,7 +129,15 @@ export default function OrdersPage() {
           .order("departure_time", { ascending: true });
 
         if (activeReqsErr) throw activeReqsErr;
-        setActivePassengerRequests(activeReqs || []);
+        
+        const activeReqsWithDriver = await Promise.all(
+          (activeReqs || []).map(async (req) => {
+            if (!req.accepted_driver_id) return { ...req, driver: null };
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.accepted_driver_id).single();
+            return { ...req, driver: profile };
+          })
+        );
+        setActivePassengerRequests(activeReqsWithDriver);
 
         // Fetch past passenger requests (completed, cancelled)
         const { data: pastReqs, error: pastReqsErr } = await supabase
@@ -139,7 +148,15 @@ export default function OrdersPage() {
           .order("created_at", { ascending: false });
 
         if (pastReqsErr) throw pastReqsErr;
-        setPastPassengerRequests(pastReqs || []);
+        
+        const pastReqsWithDriver = await Promise.all(
+          (pastReqs || []).map(async (req) => {
+            if (!req.accepted_driver_id) return { ...req, driver: null };
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.accepted_driver_id).single();
+            return { ...req, driver: profile };
+          })
+        );
+        setPastPassengerRequests(pastReqsWithDriver);
 
       } else if (role === "driver") {
         // Fetch active/ongoing rides offered by driver (keeps status "active" when in progress)
@@ -152,17 +169,18 @@ export default function OrdersPage() {
 
         if (activeRidesErr) throw activeRidesErr;
 
-        // Fetch bookings count for each active ride
+        // Fetch bookings count and passengers for each active ride
         const ridesWithCounts = await Promise.all(
           (activeRides || []).map(async (ride) => {
             const { data: bookingRows } = await supabase
               .from("bookings")
-              .select("*")
+              .select("*, passenger:profiles(*)")
               .eq("ride_id", ride.id)
               .in("booking_status", ["pending", "confirmed"]);
             return {
               ...ride,
               bookingCount: bookingRows?.length || 0,
+              passengers: bookingRows?.map(b => b.passenger).filter(Boolean) || [],
             };
           })
         );
@@ -177,7 +195,15 @@ export default function OrdersPage() {
           .order("departure_time", { ascending: true });
 
         if (activeReqsErr) throw activeReqsErr;
-        setActiveDriverRequests(activeReqs || []);
+        
+        const activeReqsWithPassenger = await Promise.all(
+          (activeReqs || []).map(async (req) => {
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.passenger_id).single();
+            return { ...req, passenger: profile };
+          })
+        );
+        
+        setActiveDriverRequests(activeReqsWithPassenger);
 
         // Fetch past rides offered by driver (closed/completed)
         const { data: pastRides, error: pastRidesErr } = await supabase
@@ -448,6 +474,13 @@ export default function OrdersPage() {
         await supabase.from("alerts").insert(alerts);
       }
 
+      // Notify driver
+      await supabase.from("alerts").insert({
+        user_id: ride.driver_id,
+        title: "Ride Completed",
+        message: `You have successfully completed your ride to ${dest.replace(/\[[^\]]+\]/g, "").trim()}.`,
+      });
+
       loadData();
     });
 
@@ -677,8 +710,32 @@ export default function OrdersPage() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground space-y-1">
-                          <p>Driver: <span className="font-medium text-foreground">Active CampusRide Driver</span></p>
-                          <p>Vehicle: <span className="font-medium text-foreground">Perodua Myvi (WXY 1234)</span></p>
+                          <div className="mt-3 pt-3 border-t border-border/50">
+                            <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5" /> Driver
+                            </p>
+                            <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                              <div className="flex justify-between items-center px-1">
+                                <span className="font-medium text-foreground flex items-center gap-1">
+                                  {booking.rides?.driver?.full_name || "Unknown Driver"}
+                                  {booking.rides?.driver?.gender && booking.rides?.driver?.gender !== "Prefer not to say" && (
+                                    <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                      {booking.rides.driver.gender}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              {booking.rides?.driver?.phone_number && (
+                                <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" /> {booking.rides.driver.phone_number}
+                                </p>
+                              )}
+                              <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                <Car className="h-3 w-3 text-muted-foreground" />
+                                {booking.rides?.driver?.vehicle_model ? `${booking.rides.driver.vehicle_color ? booking.rides.driver.vehicle_color + ' ' : ''}${booking.rides.driver.vehicle_model} ${booking.rides.driver.vehicle_plate ? `(${booking.rides.driver.vehicle_plate})` : ''}` : "Perodua Myvi (WXY 1234)"}
+                              </p>
+                            </div>
+                          </div>
                           <div className="flex items-center gap-2 mt-2">
                             <span>Payment:</span>
                             {renderPaymentBadge(paymentMethod)}
@@ -714,6 +771,34 @@ export default function OrdersPage() {
                             <span>Payment:</span>
                             {renderPaymentBadge(paymentMethod)}
                           </div>
+                          <div className="mt-3 pt-3 border-t border-border/50">
+                            <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                              <User className="h-3.5 w-3.5" /> Driver
+                            </p>
+                            <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                              <div className="flex justify-between items-center px-1">
+                                <span className="font-medium text-foreground flex items-center gap-1">
+                                  {request.driver?.full_name || request.driver?.email || (request.driver ? "No Name Set" : "Fetch Blocked")}
+                                  {request.driver?.gender && request.driver?.gender !== "Prefer not to say" && (
+                                    <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                      {request.driver.gender}
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                              {request.driver?.phone_number && (
+                                <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                  <Phone className="h-3 w-3 text-muted-foreground" /> {request.driver.phone_number}
+                                </p>
+                              )}
+                              {request.driver?.vehicle_model && (
+                                <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                  <Car className="h-3 w-3 text-muted-foreground" />
+                                  {request.driver.vehicle_color ? request.driver.vehicle_color + ' ' : ''}{request.driver.vehicle_model} {request.driver.vehicle_plate ? `(${request.driver.vehicle_plate})` : ''}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
                         <Button asChild className="w-full rounded-xl gap-2">
                           <Link href={`/passenger/tracking/r5`}>
@@ -740,7 +825,13 @@ export default function OrdersPage() {
                           </span>
                         </div>
                         <div className="text-xs text-muted-foreground space-y-1">
-                          <p>Driver: <span className="font-medium text-foreground">Active CampusRide Driver</span></p>
+                          <p>Driver: <span className="font-medium text-foreground">{booking.rides?.driver?.full_name || "Unknown"}</span>
+                            {booking.rides?.driver?.gender && booking.rides?.driver?.gender !== "Prefer not to say" && (
+                              <span className="ml-2 text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold">
+                                {booking.rides.driver.gender}
+                              </span>
+                            )}
+                          </p>
                           <p>Total Fare: <span className="font-semibold text-foreground">RM {booking.rides?.cost_per_person.toFixed(2)}</span></p>
                           <div className="flex items-center gap-2 mt-2">
                             <span>Payment Type:</span>
@@ -784,8 +875,13 @@ export default function OrdersPage() {
                     return (
                       <Card key={booking.id} className="overflow-hidden border border-border bg-card">
                         <CardContent className="p-5 space-y-3">
-                          <h3 className="font-semibold text-base leading-tight">
-                            {booking.rides?.pickup_location} → {destination}
+                          <h3 className="font-semibold text-base leading-tight flex items-center gap-2 flex-wrap">
+                            <span>{booking.rides?.pickup_location} → {destination}</span>
+                            {booking.rides?.gender_preference && booking.rides?.gender_preference !== "Any" && (
+                              <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
+                                {booking.rides.gender_preference}
+                              </span>
+                            )}
                           </h3>
                           <div className="text-xs text-muted-foreground space-y-1.5">
                             <p>Departure: <span className="font-medium text-foreground">{booking.rides?.departure_time ? new Date(booking.rides.departure_time).toLocaleString() : "N/A"}</span></p>
@@ -806,6 +902,32 @@ export default function OrdersPage() {
                                 </span>
                               )}
                             </p>
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5" /> Driver
+                              </p>
+                              <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                <div className="flex justify-between items-center px-1">
+                                  <span className="font-medium text-foreground flex items-center gap-1">
+                                    {booking.rides?.driver?.full_name || booking.rides?.driver?.email || (booking.rides?.driver ? "No Name Set" : "Fetch Blocked")}
+                                    {booking.rides?.driver?.gender && booking.rides?.driver?.gender !== "Prefer not to say" && (
+                                      <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                        {booking.rides.driver.gender}
+                                      </span>
+                                    )}
+                                  </span>
+                                </div>
+                                {booking.rides?.driver?.phone_number && (
+                                  <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {booking.rides.driver.phone_number}
+                                  </p>
+                                )}
+                                <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                  <Car className="h-3 w-3 text-muted-foreground" />
+                                  {booking.rides?.driver?.vehicle_model ? `${booking.rides.driver.vehicle_color ? booking.rides.driver.vehicle_color + ' ' : ''}${booking.rides.driver.vehicle_model} ${booking.rides.driver.vehicle_plate ? `(${booking.rides.driver.vehicle_plate})` : ''}` : "Perodua Myvi (WXY 1234)"}
+                                </p>
+                              </div>
+                            </div>
                           </div>
                           <Button
                             variant="destructive"
@@ -832,8 +954,13 @@ export default function OrdersPage() {
                     return (
                       <Card key={request.id} className="overflow-hidden border border-border bg-card">
                         <CardContent className="p-5 space-y-3">
-                          <h3 className="font-semibold text-base leading-tight">
-                            {request.pickup_location} → {destination}
+                          <h3 className="font-semibold text-base leading-tight flex items-center gap-2 flex-wrap">
+                            <span>{request.pickup_location} → {destination}</span>
+                            {request.gender_preference && request.gender_preference !== "Any" && (
+                              <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
+                                {request.gender_preference}
+                              </span>
+                            )}
                           </h3>
                           <div className="text-xs text-muted-foreground space-y-1.5">
                             <p>Departure: <span className="font-medium text-foreground">{new Date(request.departure_time).toLocaleString()}</span></p>
@@ -849,11 +976,41 @@ export default function OrdersPage() {
                                   Waiting for Driver
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center rounded-full bg-blue-500/15 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
+                                <span className="inline-flex items-center rounded-full bg-[#34c759]/15 px-2.5 py-0.5 text-xs font-semibold text-[#34c759]">
                                   Driver Assigned
                                 </span>
                               )}
                             </p>
+                            {request.status !== "open" && (
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                  <User className="h-3.5 w-3.5" /> Driver
+                                </p>
+                                <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                  <div className="flex justify-between items-center px-1">
+                                    <span className="font-medium text-foreground flex items-center gap-1">
+                                      {request.driver?.full_name || "Unknown"}
+                                      {request.driver?.gender && request.driver?.gender !== "Prefer not to say" && (
+                                        <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                          {request.driver.gender}
+                                        </span>
+                                      )}
+                                    </span>
+                                  </div>
+                                  {request.driver?.phone_number && (
+                                    <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                      <Phone className="h-3 w-3 text-muted-foreground" /> {request.driver.phone_number}
+                                    </p>
+                                  )}
+                                  {request.driver?.vehicle_model && (
+                                    <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                      <Car className="h-3 w-3 text-muted-foreground" />
+                                      {request.driver.vehicle_color ? request.driver.vehicle_color + ' ' : ''}{request.driver.vehicle_model} {request.driver.vehicle_plate ? `(${request.driver.vehicle_plate})` : ''}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           {request.status === "open" && (
                             <Button
@@ -1011,6 +1168,37 @@ export default function OrdersPage() {
                             <span>Payment:</span>
                             {renderPaymentBadge(paymentMethod)}
                           </div>
+                          
+                          {/* Passenger Info */}
+                          {ride.passengers && ride.passengers.length > 0 && (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5" /> Passengers onboard
+                              </p>
+                              <div className="space-y-1.5">
+                                {ride.passengers.map((p: any, idx: number) => (
+                                  <div key={idx} className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                    <div className="flex justify-between items-center px-1">
+                                      <span className="font-medium text-foreground flex items-center gap-1">
+                                        {p?.full_name || "Unknown Passenger"}
+                                        {p?.gender && p?.gender !== "Prefer not to say" && (
+                                          <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                            {p.gender}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">1 Seat</span>
+                                    </div>
+                                    {p?.phone_number && (
+                                      <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                        <Phone className="h-3 w-3 text-muted-foreground" /> {p.phone_number}
+                                      </p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button asChild variant="outline" className="flex-1 rounded-xl text-xs gap-1.5">
@@ -1050,6 +1238,33 @@ export default function OrdersPage() {
                             <span>Payment:</span>
                             {renderPaymentBadge(paymentMethod)}
                           </div>
+                          
+                          {/* Passenger Info */}
+                          {request.passenger && (
+                            <div className="mt-3 pt-3 border-t border-border/50">
+                              <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5" /> Passenger onboard
+                              </p>
+                              <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                <div className="flex justify-between items-center px-1">
+                                  <span className="font-medium text-foreground flex items-center gap-1">
+                                    {request.passenger.full_name || "Unknown Passenger"}
+                                    {request.passenger.gender && request.passenger.gender !== "Prefer not to say" && (
+                                      <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                        {request.passenger.gender}
+                                      </span>
+                                    )}
+                                  </span>
+                                  <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">{request.seats_needed} Seat(s)</span>
+                                </div>
+                                {request.passenger.phone_number && (
+                                  <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {request.passenger.phone_number}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          )}
                         </div>
                         <div className="flex gap-2">
                           <Button asChild variant="outline" className="flex-1 rounded-xl text-xs gap-1.5">
@@ -1100,6 +1315,37 @@ export default function OrdersPage() {
                               <span>Payment:</span>
                               {renderPaymentBadge(paymentMethod)}
                             </div>
+                            
+                            {/* Passenger Info */}
+                            {ride.passengers && ride.passengers.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                  <User className="h-3.5 w-3.5" /> Passengers
+                                </p>
+                                <div className="space-y-1.5">
+                                  {ride.passengers.map((p: any, idx: number) => (
+                                    <div key={idx} className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                      <div className="flex justify-between items-center px-1">
+                                        <span className="font-medium text-foreground flex items-center gap-1">
+                                          {p?.full_name || "Unknown Passenger"}
+                                          {p?.gender && p?.gender !== "Prefer not to say" && (
+                                            <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                              {p.gender}
+                                            </span>
+                                          )}
+                                        </span>
+                                        <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">1 Seat</span>
+                                      </div>
+                                      {p?.phone_number && (
+                                        <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                          <Phone className="h-3 w-3 text-muted-foreground" /> {p.phone_number}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-2 pt-1">
                             <Button
@@ -1144,6 +1390,33 @@ export default function OrdersPage() {
                               <span>Payment:</span>
                               {renderPaymentBadge(paymentMethod)}
                             </div>
+                            
+                            {/* Passenger Info */}
+                            {request.passenger && (
+                              <div className="mt-3 pt-3 border-t border-border/50">
+                                <p className="font-medium text-foreground mb-1.5 flex items-center gap-1.5">
+                                  <User className="h-3.5 w-3.5" /> Passenger
+                                </p>
+                                <div className="flex flex-col gap-1 bg-muted/30 p-2 rounded-md">
+                                  <div className="flex justify-between items-center px-1">
+                                    <span className="font-medium text-foreground flex items-center gap-1">
+                                      {request.passenger.full_name || "Unknown Passenger"}
+                                      {request.passenger.gender && request.passenger.gender !== "Prefer not to say" && (
+                                        <span className="text-[9px] bg-primary/10 text-primary px-1 py-0.5 rounded uppercase tracking-wider">
+                                          {request.passenger.gender}
+                                        </span>
+                                      )}
+                                    </span>
+                                    <span className="text-[10px] bg-primary/10 text-primary px-1.5 rounded-sm">{request.seats_needed} Seat(s)</span>
+                                  </div>
+                                  {request.passenger.phone_number && (
+                                    <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
+                                      <Phone className="h-3 w-3 text-muted-foreground" /> {request.passenger.phone_number}
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+                            )}
                           </div>
                           <div className="flex gap-2 pt-1">
                             <Button
