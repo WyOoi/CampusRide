@@ -298,28 +298,6 @@ export default function DashboardPage() {
         </Link>
       </div>
 
-      {/* PWA Download Banner */}
-      {isInstallable && (
-        <div className="relative overflow-hidden bg-gradient-to-r from-cyan-950/40 via-blue-950/40 to-emerald-950/40 border border-cyan-500/20 rounded-3xl p-5 md:p-6 flex flex-col md:flex-row items-center justify-between gap-4 backdrop-blur-md">
-          <div className="absolute -top-12 -right-12 w-36 h-36 bg-cyan-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -bottom-12 -left-12 w-36 h-36 bg-emerald-500/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="flex items-center gap-3">
-            <div className="bg-cyan-500/20 p-3 rounded-full shrink-0">
-              <Download className="text-cyan-400 h-6 w-6 animate-bounce" />
-            </div>
-            <div>
-              <h3 className="font-bold text-white text-base md:text-lg">CampusRide on your Home Screen</h3>
-              <p className="text-xs md:text-sm text-gray-400 mt-0.5">Install the app for quick offline access and real-time alerts.</p>
-            </div>
-          </div>
-          <Button 
-            onClick={installApp} 
-            className="w-full md:w-auto rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white font-semibold shadow-[0_0_20px_rgba(6,182,212,0.25)] shrink-0"
-          >
-            Install Now
-          </Button>
-        </div>
-      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
         {/* Active Trips Section */}
@@ -371,6 +349,29 @@ export default function DashboardPage() {
         {/* Notifications Section */}
         <div>
           <h2 className="text-lg font-bold text-white mb-4">Notifications</h2>
+          
+          {isInstallable && (params?.role === "driver" || params?.role === "passenger") && (
+            <div className="mb-4 relative overflow-hidden bg-gradient-to-r from-cyan-950/40 via-blue-950/40 to-emerald-950/40 border border-cyan-500/20 rounded-2xl p-4 flex items-center justify-between gap-3 backdrop-blur-md">
+              <div className="absolute -top-8 -right-8 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl pointer-events-none" />
+              <div className="flex items-center gap-3">
+                <div className="bg-cyan-500/20 p-2.5 rounded-full shrink-0">
+                  <Download className="text-cyan-400 h-5 w-5 animate-bounce" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-white text-sm">CampusRide App</h3>
+                  <p className="text-xs text-gray-400 mt-0.5">Install on your Home Screen</p>
+                </div>
+              </div>
+              <Button 
+                onClick={installApp} 
+                size="sm"
+                className="rounded-xl bg-gradient-to-r from-cyan-500 to-emerald-500 hover:from-cyan-400 hover:to-emerald-400 text-white font-semibold text-xs py-1.5 px-4 shrink-0 shadow-[0_0_15px_rgba(6,182,212,0.2)]"
+              >
+                Install Now
+              </Button>
+            </div>
+          )}
+
           <div className="bg-[#12141c] border border-gray-800 rounded-3xl flex flex-col overflow-hidden h-[200px]">
             <div className="flex-1 p-6 flex flex-col items-center justify-center text-center border-b border-gray-800 overflow-y-auto">
               {alerts.length === 0 ? (
