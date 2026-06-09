@@ -13,9 +13,10 @@ export default function NotificationsPage() {
   const [alerts, setAlerts] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
 
-
-    const {
-      data: { user },
+  useEffect(() => {
+    const loadAlerts = async () => {
+      const {
+        data: { user },
     } = await supabase.auth.getUser();
 
     if (!user) {
