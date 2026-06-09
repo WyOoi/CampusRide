@@ -20,7 +20,7 @@ export const metadata: Metadata = {
     template: `%s · ${APP_NAME}`,
   },
   description:
-    "CampusRide is a university-exclusive peer-to-peer carpooling prototype for UTeM students and staff (frontend-only MVP).",
+    "CampusRide UTeM — A secure, convenient peer-to-peer carpooling platform for UTeM students and staff to share rides, split costs, and travel together.",
   manifest: "/manifest.json",
 };
 
