@@ -229,10 +229,7 @@ export default function ProfilePage() {
                     <Label>University email</Label>
                     <Input value={email} className="rounded-xl" readOnly />
                   </div>
-                  <div className="space-y-2 sm:col-span-2">
-                    <Label>Faculty</Label>
-                    <Input value={faculty} onChange={(e) => { setFaculty(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
-                  </div>
+
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Gender</Label>
                     <Select disabled={!isEditing} value={gender} onValueChange={(val) => { setGender(val); handleInputChange(); }}>
@@ -248,7 +245,24 @@ export default function ProfilePage() {
                   </div>
                   <div className="space-y-2 sm:col-span-2">
                     <Label>Phone Number</Label>
-                    <Input placeholder="+60123456789" value={phoneNumber} onChange={(e) => { setPhoneNumber(e.target.value); handleInputChange(); }} className="rounded-xl" readOnly={!isEditing} />
+                    <div className="flex">
+                      <div className="flex items-center justify-center px-3 border border-r-0 border-input bg-muted text-muted-foreground rounded-l-xl text-sm font-medium">
+                        +60
+                      </div>
+                      <Input 
+                        placeholder="1139679800" 
+                        value={phoneNumber ? phoneNumber.replace(/^(\+60|0)/, '') : ''} 
+                        onChange={(e) => { 
+                          let val = e.target.value.replace(/^(\+60|0)/, '');
+                          // Clean any non-digit characters to keep it numeric
+                          val = val.replace(/\D/g, '');
+                          setPhoneNumber(val ? '+60' + val : ''); 
+                          handleInputChange(); 
+                        }} 
+                        className="rounded-l-none rounded-r-xl focus-visible:ring-offset-0" 
+                        readOnly={!isEditing} 
+                      />
+                    </div>
                   </div>
                 </CardContent>
               </Card>

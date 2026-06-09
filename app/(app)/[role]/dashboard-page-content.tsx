@@ -256,14 +256,14 @@ export default function DashboardPage() {
       </div>
 
       {/* Action Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-4">
         {/* Request/Offer Ride */}
         <Link href={params?.role === "passenger" ? "/passenger/request-ride" : "/driver/offer"} className="block">
-          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
-            <div className="bg-[#1c2235] p-4 rounded-full mb-3">
-              <CarFront className="text-[#5B7BFB]" size={24} />
+          <div className="bg-[#12141c] border border-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[100px] md:h-[140px]">
+            <div className="bg-[#1c2235] p-3 md:p-4 rounded-full mb-2 md:mb-3">
+              <CarFront className="text-[#5B7BFB] w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <span className="font-semibold text-white">
+            <span className="font-semibold text-white text-sm md:text-base text-center">
               {params?.role === "passenger" ? "Request Ride" : "Offer Ride"}
             </span>
           </div>
@@ -271,24 +271,24 @@ export default function DashboardPage() {
 
         {/* Find Ride */}
         <Link href="/find" className="block">
-          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
-            <div className="bg-[#2a261a] p-4 rounded-full mb-3">
-              <Search className="text-[#eab308]" size={24} />
+          <div className="bg-[#12141c] border border-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col items-center justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[100px] md:h-[140px]">
+            <div className="bg-[#2a261a] p-3 md:p-4 rounded-full mb-2 md:mb-3">
+              <Search className="text-[#eab308] w-5 h-5 md:w-6 md:h-6" />
             </div>
-            <span className="font-semibold text-white">Find Ride</span>
+            <span className="font-semibold text-white text-sm md:text-base text-center">Find Ride</span>
           </div>
         </Link>
 
         {/* My Orders */}
-        <Link href="/orders" className="block h-full">
-          <div className="bg-[#12141c] border border-gray-800 rounded-3xl p-6 flex flex-col justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[140px]">
-            <div className="flex items-center gap-4">
-              <div className="bg-[#2a2b36] p-4 rounded-full shrink-0">
-                <ClipboardList className="text-white" size={24} />
+        <Link href="/orders" className="block col-span-2 md:col-span-1 h-full">
+          <div className="bg-[#12141c] border border-gray-800 rounded-2xl md:rounded-3xl p-4 md:p-6 flex flex-col justify-center cursor-pointer hover:bg-gray-800/80 transition-colors h-[80px] md:h-[140px]">
+            <div className="flex items-center gap-3 md:gap-4">
+              <div className="bg-[#2a2b36] p-3 md:p-4 rounded-full shrink-0">
+                <ClipboardList className="text-white w-5 h-5 md:w-6 md:h-6" />
               </div>
               <div>
-                <h3 className="font-semibold text-white mb-1">My Orders</h3>
-                <p className="text-xs text-gray-400">View your recent and upcoming trips</p>
+                <h3 className="font-semibold text-white mb-0.5 md:mb-1 text-sm md:text-base">My Orders</h3>
+                <p className="text-[11px] md:text-xs text-gray-400">View your recent and upcoming trips</p>
               </div>
             </div>
           </div>
