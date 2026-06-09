@@ -250,7 +250,7 @@ export default function ProfilePage() {
                         +60
                       </div>
                       <Input 
-                        placeholder="1139679800" 
+                        placeholder="123456789" 
                         value={phoneNumber ? phoneNumber.replace(/^(\+60|0)/, '') : ''} 
                         onChange={(e) => { 
                           let val = e.target.value.replace(/^(\+60|0)/, '');

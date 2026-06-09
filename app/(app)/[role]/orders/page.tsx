@@ -52,6 +52,12 @@ export function parseRideDestination(destStr: string) {
   return { destination: cleanDest, paymentMethod, rideState };
 }
 
+export function formatPhone(phone: string) {
+  if (!phone) return "";
+  if (phone.startsWith('+60')) return phone;
+  return '+60' + phone.replace(/^0/, '');
+}
+
 export default function OrdersPage() {
   const params = useParams<{ role: string }>();
   const router = useRouter();
@@ -727,7 +733,7 @@ export default function OrdersPage() {
                               </div>
                               {booking.rides?.driver?.phone_number && (
                                 <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
-                                  <Phone className="h-3 w-3 text-muted-foreground" /> {booking.rides.driver.phone_number}
+                                  <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(booking.rides.driver.phone_number)}
                                 </p>
                               )}
                               <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
@@ -788,7 +794,7 @@ export default function OrdersPage() {
                               </div>
                               {request.driver?.phone_number && (
                                 <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
-                                  <Phone className="h-3 w-3 text-muted-foreground" /> {request.driver.phone_number}
+                                  <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(request.driver.phone_number)}
                                 </p>
                               )}
                               {request.driver?.vehicle_model && (
@@ -919,7 +925,7 @@ export default function OrdersPage() {
                                 </div>
                                 {booking.rides?.driver?.phone_number && (
                                   <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
-                                    <Phone className="h-3 w-3 text-muted-foreground" /> {booking.rides.driver.phone_number}
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(booking.rides.driver.phone_number)}
                                   </p>
                                 )}
                                 <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
@@ -999,7 +1005,7 @@ export default function OrdersPage() {
                                   </div>
                                   {request.driver?.phone_number && (
                                     <p className="flex items-center gap-1.5 text-[11px] text-foreground font-medium px-1">
-                                      <Phone className="h-3 w-3 text-muted-foreground" /> {request.driver.phone_number}
+                                      <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(request.driver.phone_number)}
                                     </p>
                                   )}
                                   {request.driver?.vehicle_model && (
