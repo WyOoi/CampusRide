@@ -10,11 +10,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent } from "@/components/ui/card";
 
 import { EmptyState } from "@/components/common/empty-state";
-import { Search } from "lucide-react";
+import { Search, Phone, Car, User } from "lucide-react";
 
 import type { RideStatus } from "@/types";
 import { supabase } from "@/lib/supabase";
 
+
+export function formatPhone(phone: string) {
+  if (!phone) return "";
+  if (phone.startsWith('+60')) return phone;
+  return '+60' + phone.replace(/^0/, '');
+}
 
 export default function FindRidePage() {
   const router = useRouter();
@@ -264,12 +270,29 @@ if (ride.driver_id === user.id) {
 </p>
 
 {ride.driver && (
-  <div className="mt-3 p-2 bg-muted/40 rounded-lg text-sm flex justify-between items-center">
-    <span className="font-medium text-foreground">Driver: {ride.driver.full_name || "Unknown"}</span>
-    {ride.driver.gender && ride.driver.gender !== "Prefer not to say" && (
-      <span className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold">
-        {ride.driver.gender}
+  <div className="mt-3 p-2.5 bg-muted/40 rounded-lg text-xs space-y-1.5">
+    <div className="flex justify-between items-center">
+      <span className="font-semibold text-foreground flex items-center gap-1">
+        <User className="h-3.5 w-3.5 text-muted-foreground" />
+        Driver: {ride.driver.full_name || "Unknown"}
       </span>
+      {ride.driver.gender && ride.driver.gender !== "Prefer not to say" && (
+        <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold">
+          {ride.driver.gender}
+        </span>
+      )}
+    </div>
+    {ride.driver.phone_number && (
+      <p className="text-muted-foreground flex items-center gap-1.5">
+        <Phone className="h-3 w-3 text-muted-foreground" />
+        Phone: {formatPhone(ride.driver.phone_number)}
+      </p>
+    )}
+    {ride.driver.vehicle_plate && (
+      <p className="text-muted-foreground flex items-center gap-1.5">
+        <Car className="h-3 w-3 text-muted-foreground" />
+        Vehicle: {ride.driver.vehicle_color ? ride.driver.vehicle_color + ' ' : ''}{ride.driver.vehicle_model || "Perodua Myvi"} ({ride.driver.vehicle_plate})
+      </p>
     )}
   </div>
 )}

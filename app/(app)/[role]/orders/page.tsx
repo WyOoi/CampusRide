@@ -220,7 +220,22 @@ export default function OrdersPage() {
           .order("departure_time", { ascending: false });
 
         if (pastRidesErr) throw pastRidesErr;
-        setPastDriverRides(pastRides || []);
+
+        const pastRidesWithCounts = await Promise.all(
+          (pastRides || []).map(async (ride) => {
+            const { data: bookingRows } = await supabase
+              .from("bookings")
+              .select("*, passenger:profiles(*)")
+              .eq("ride_id", ride.id)
+              .in("booking_status", ["completed", "cancelled", "cancelled_by_driver"]);
+            return {
+              ...ride,
+              bookingCount: bookingRows?.length || 0,
+              passengers: bookingRows?.map(b => b.passenger).filter(Boolean) || [],
+            };
+          })
+        );
+        setPastDriverRides(pastRidesWithCounts);
 
         // Fetch past driver requests (completed, cancelled)
         const { data: pastReqs, error: pastReqsErr } = await supabase
@@ -231,7 +246,14 @@ export default function OrdersPage() {
           .order("created_at", { ascending: false });
 
         if (pastReqsErr) throw pastReqsErr;
-        setPastDriverRequests(pastReqs || []);
+
+        const pastReqsWithPassenger = await Promise.all(
+          (pastReqs || []).map(async (req) => {
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.passenger_id).single();
+            return { ...req, passenger: profile };
+          })
+        );
+        setPastDriverRequests(pastReqsWithPassenger);
       }
     } catch (err: any) {
       console.error("Error loading order data:", err);
@@ -1081,6 +1103,21 @@ export default function OrdersPage() {
                                 )}
                               </p>
                             </div>
+                            {booking.rides?.driver && (
+                              <div className="mt-2.5 p-2 bg-muted/30 rounded-md space-y-1">
+                                <p className="font-semibold text-[11px] text-foreground">Driver: {booking.rides.driver.full_name || "Unknown"}</p>
+                                {booking.rides.driver.phone_number && (
+                                  <p className="text-[10px] flex items-center gap-1">
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(booking.rides.driver.phone_number)}
+                                  </p>
+                                )}
+                                {booking.rides.driver.vehicle_plate && (
+                                  <p className="text-[10px] flex items-center gap-1">
+                                    <Car className="h-3 w-3 text-muted-foreground" /> {booking.rides.driver.vehicle_color ? booking.rides.driver.vehicle_color + ' ' : ''}{booking.rides.driver.vehicle_model || "Perodua Myvi"} ({booking.rides.driver.vehicle_plate})
+                                  </p>
+                                )}
+                              </div>
+                            )}
                             <p className="text-[10px] text-muted-foreground pt-1">
                               Booked on {new Date(booking.created_at).toLocaleString()}
                             </p>
@@ -1125,6 +1162,21 @@ export default function OrdersPage() {
                                 )}
                               </p>
                             </div>
+                            {request.driver && (
+                              <div className="mt-2.5 p-2 bg-muted/30 rounded-md space-y-1">
+                                <p className="font-semibold text-[11px] text-foreground">Driver: {request.driver.full_name || "Unknown"}</p>
+                                {request.driver.phone_number && (
+                                  <p className="text-[10px] flex items-center gap-1">
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(request.driver.phone_number)}
+                                  </p>
+                                )}
+                                {request.driver.vehicle_plate && (
+                                  <p className="text-[10px] flex items-center gap-1">
+                                    <Car className="h-3 w-3 text-muted-foreground" /> {request.driver.vehicle_color ? request.driver.vehicle_color + ' ' : ''}{request.driver.vehicle_model || "Perodua Myvi"} ({request.driver.vehicle_plate})
+                                  </p>
+                                )}
+                              </div>
+                            )}
                             <p className="text-[10px] text-muted-foreground pt-1">
                               Requested on {new Date(request.created_at).toLocaleString()}
                             </p>
@@ -1487,6 +1539,23 @@ export default function OrdersPage() {
                                 </span>
                               </p>
                             </div>
+                            {ride.passengers && ride.passengers.length > 0 && (
+                              <div className="mt-2.5 p-2 bg-muted/30 rounded-md space-y-1">
+                                <p className="font-semibold text-[11px] text-foreground">Passengers:</p>
+                                <div className="space-y-1">
+                                  {ride.passengers.map((p: any, idx: number) => (
+                                    <div key={idx} className="border-b border-border/30 pb-1 last:border-0 last:pb-0">
+                                      <p className="font-medium text-[11px] text-foreground">{p.full_name || "Unknown"}</p>
+                                      {p.phone_number && (
+                                        <p className="text-[10px] flex items-center gap-1">
+                                          <Phone className="h-2.5 w-2.5 text-muted-foreground" /> {formatPhone(p.phone_number)}
+                                        </p>
+                                      )}
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       );
@@ -1528,6 +1597,16 @@ export default function OrdersPage() {
                                 )}
                               </p>
                             </div>
+                            {request.passenger && (
+                              <div className="mt-2.5 p-2 bg-muted/30 rounded-md space-y-1">
+                                <p className="font-semibold text-[11px] text-foreground">Passenger: {request.passenger.full_name || "Unknown"}</p>
+                                {request.passenger.phone_number && (
+                                  <p className="text-[10px] flex items-center gap-1">
+                                    <Phone className="h-3 w-3 text-muted-foreground" /> {formatPhone(request.passenger.phone_number)}
+                                  </p>
+                                )}
+                              </div>
+                            )}
                           </CardContent>
                         </Card>
                       );

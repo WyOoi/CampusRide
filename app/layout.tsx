@@ -21,6 +21,7 @@ export const metadata: Metadata = {
   },
   description:
     "CampusRide is a university-exclusive peer-to-peer carpooling prototype for UTeM students and staff (frontend-only MVP).",
+  manifest: "/manifest.json",
 };
 
 export default function RootLayout({

@@ -26,6 +26,8 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { usePWA } from "@/hooks/use-pwa";
+import { Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { APP_NAME, UNIVERSITY } from "@/lib/constants";
@@ -72,6 +74,7 @@ const features = [
 ];
 
 export default function LandingPage() {
+  const { isInstallable, installApp } = usePWA();
   const [matchLogs, setMatchLogs] = useState<string[]>([
     "Initializing GeoMesh...",
     "Scanning UTeM Main Campus...",
@@ -164,6 +167,15 @@ export default function LandingPage() {
               <Button asChild size="lg" variant="outline" className="rounded-xl text-sm border-slate-800 bg-slate-900/30 hover:bg-slate-800/80 hover:text-white transition-all text-slate-300 font-semibold backdrop-blur-md">
                 <Link href="/login">Sign In</Link>
               </Button>
+              {isInstallable && (
+                <Button 
+                  size="lg" 
+                  onClick={installApp}
+                  className="rounded-xl text-sm bg-gradient-to-r from-teal-500 to-emerald-600 hover:from-teal-400 hover:to-emerald-500 text-white font-semibold shadow-[0_0_20px_rgba(16,185,129,0.35)] hover:shadow-[0_0_30px_rgba(16,185,129,0.5)] border-0 transition-all duration-300"
+                >
+                  <Download className="mr-2 h-4 w-4 animate-bounce" /> Download Web App
+                </Button>
+              )}
             </div>
 
             {/* Terminal HUD: Database Logs */}

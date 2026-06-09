@@ -17,7 +17,9 @@ import {
   Wallet,
   CreditCard,
   Banknote,
-  ShieldCheck
+  ShieldCheck,
+  User,
+  Phone
 } from "lucide-react";
 import { PageHeader } from "@/components/common/page-header";
 import { Card, CardContent } from "@/components/ui/card";
@@ -53,6 +55,12 @@ export function parseRideDestination(destStr: string) {
   const cleanDest = destStr.replace(/\[[^\]]+\]/g, "").trim();
 
   return { destination: cleanDest, paymentMethod, rideState };
+}
+
+export function formatPhone(phone: string) {
+  if (!phone) return "";
+  if (phone.startsWith('+60')) return phone;
+  return '+60' + phone.replace(/^0/, '');
 }
 
 export default function RequestsPage() {
@@ -118,7 +126,14 @@ export default function RequestsPage() {
           .order("created_at", { ascending: false });
 
         if (error) throw error;
-        setRequests(data || []);
+        
+        const requestsWithPassengers = await Promise.all(
+          (data || []).map(async (req) => {
+            const { data: profile } = await supabase.from('profiles').select('*').eq('id', req.passenger_id).single();
+            return { ...req, passenger: profile };
+          })
+        );
+        setRequests(requestsWithPassengers);
       }
     } catch (error: any) {
       console.error("Error loading requests:", error);
@@ -277,6 +292,27 @@ export default function RequestsPage() {
                     <p>Departure: <span className="font-medium text-foreground">{new Date(request.departure_time).toLocaleString()}</span></p>
                     <p>Seats Needed: <span className="font-medium text-foreground">{request.seats_needed}</span></p>
                   </div>
+                  {request.passenger && (
+                    <div className="mt-2 p-2 bg-muted/40 rounded-lg text-xs space-y-1">
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-foreground flex items-center gap-1">
+                          <User className="h-3.5 w-3.5 text-muted-foreground" />
+                          Passenger: {request.passenger.full_name || "Unknown"}
+                        </span>
+                        {request.passenger.gender && request.passenger.gender !== "Prefer not to say" && (
+                          <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold">
+                            {request.passenger.gender}
+                          </span>
+                        )}
+                      </div>
+                      {request.passenger.phone_number && (
+                        <p className="text-muted-foreground flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          Phone: {formatPhone(request.passenger.phone_number)}
+                        </p>
+                      )}
+                    </div>
+                  )}
                   {userId !== request.passenger_id && (
                     <div className="flex gap-2 pt-2">
                       <Button
@@ -390,6 +426,22 @@ export default function RequestsPage() {
                     </span>
                   </div>
                 </div>
+
+                {selectedRequest.passenger && (
+                  <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs flex gap-2 items-start">
+                    <User className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                    <div className="space-y-1">
+                      <span className="font-semibold text-foreground">Passenger Details</span>
+                      <p className="text-foreground">Name: {selectedRequest.passenger.full_name || "Unknown Passenger"}</p>
+                      {selectedRequest.passenger.phone_number && (
+                        <p className="text-foreground flex items-center gap-1">
+                          <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                          Phone: {formatPhone(selectedRequest.passenger.phone_number)}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 <div className="rounded-xl border border-border bg-muted/20 p-3 text-xs text-muted-foreground flex gap-2 items-start">
                   <ShieldCheck className="h-4 w-4 text-blue-500 shrink-0 mt-0.5" />
