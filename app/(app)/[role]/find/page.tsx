@@ -140,6 +140,13 @@ if (ride.driver_id === user.id) {
       })
       .eq("id", ride.id);
 
+        await supabase.from("alerts").insert({
+          user_id: user.id,
+          title: "Booking Confirmed",
+          message: `You have booked a ride from ${ride.pickup_location} to ${ride.destination.replace(/\[[^\]]+\]/g, "").trim()}.`,
+          is_read: false,
+        });
+
     toast.success("Ride booked successfully");
 
     router.push(`/${params.role}/orders`);
@@ -211,14 +218,37 @@ if (ride.driver_id === user.id) {
     {filtered.map((ride) => (
       <Card key={ride.id}>
         <CardContent className="p-4 space-y-2">
-          <h3 className="font-semibold flex items-center gap-2 flex-wrap">
-            <span>{ride.pickup_location} → {ride.destination}</span>
-            {ride.gender_preference && ride.gender_preference !== "Any" && (
-              <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
-                {ride.gender_preference}
-              </span>
-            )}
-          </h3>
+           <h3 className="font-semibold flex items-center gap-2 flex-wrap">
+             {/* Clean destination without meta tags */}
+             <span>{ride.pickup_location} → {ride.destination.replace(/\[payment_method:[^\]]+\]/g, '').replace(/\[vehicle:[^\]]+\]/g, '').trim()}</span>
+             {ride.gender_preference && ride.gender_preference !== "Any" && (
+               <span className="text-[10px] bg-red-500/10 text-red-500 px-1.5 py-0.5 rounded-sm uppercase tracking-wide font-semibold whitespace-nowrap">
+                 {ride.gender_preference}
+               </span>
+             )}
+             {/* Payment method */}
+             {(() => {
+               const match = ride.destination.match(/\[payment_method:([^\]]+)\]/);
+               const method = match ? match[1] : null;
+               return method ? (
+                 <span className="ml-2 text-xs bg-primary/10 text-primary px-2 py-0.5 rounded-sm uppercase">{method}</span>
+               ) : null;
+             })()}
+             {/* Vehicle info */}
+             {(() => {
+               const match = ride.destination.match(/\[vehicle:([^|]+)\|([^\]]+)\]/);
+               if (match) {
+                 const model = match[1];
+                 const plate = match[2];
+                 return (
+                   <span className="ml-2 text-xs bg-green-500/10 text-green-500 px-2 py-0.5 rounded-sm uppercase">
+                     {model} ({plate})
+                   </span>
+                 );
+               }
+               return null;
+             })()}
+           </h3>
 
           <p>
             Departure:{" "}
