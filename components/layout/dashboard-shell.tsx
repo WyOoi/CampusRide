@@ -24,7 +24,7 @@ const nav = [
   { href: "/offer", label: "Offer Ride", icon: CarFront },
   { href: "/request-ride", label: "Request Ride", icon: Search },
   { href: "/orders", label: "Orders", icon: ClipboardList },
-  { href: "/notifications", label: "Notifications", icon: Bell },
+  // { href: "/notifications", label: "Notifications", icon: Bell }, // hidden from bottom nav, accessible via home page
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
@@ -160,13 +160,7 @@ useEffect(() => {
                 <span className="flex items-center gap-2">
                   {label}
 
-                  {mounted &&
-                    item.href === "/notifications" &&
-                    unreadCount > 0 && (
-                      <span className="rounded-full bg-red-500 px-2 py-0.5 text-xs text-white">
-                        {unreadCount}
-                      </span>
-                    )}
+                  {/* notifications badge removed from bottom nav */}
                 </span>
               </Link>
             );
