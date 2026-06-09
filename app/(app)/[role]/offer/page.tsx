@@ -197,6 +197,13 @@ export default function OfferRidePage() {
 
       if (error) throw error;
 
+      await supabase.from("alerts").insert({
+        user_id: user.id,
+        title: "Ride Published",
+        message: `Your ride from ${pickupLocation} to ${destination} has been published successfully.`,
+        is_read: false,
+      });
+
       toast.success("Ride published successfully");
 
       router.push(`/${params.role}/orders`);

@@ -175,6 +175,14 @@ export default function RequestRidePage() {
       });
 
       if (error) throw error;
+
+      await supabase.from("alerts").insert({
+        user_id: user.id,
+        title: "Request Submitted",
+        message: `Your ride request from ${pickupLocation} to ${destination} has been submitted successfully.`,
+        is_read: false,
+      });
+
       toast.success("Ride request submitted");
 
       router.push(`/${params.role}/orders`);

@@ -14,39 +14,28 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
 
 
-useEffect(() => {
-  const loadAlerts = async () => {
-    console.log("Loading alerts...");
-
     const {
       data: { user },
     } = await supabase.auth.getUser();
-
-    console.log("USER:", user);
 
     if (!user) {
       setLoading(false);
       return;
     }
-const { error: readError } = await supabase
-  .from("alerts")
-  .update({ is_read: true })
-  .eq("user_id", user.id)
-  .eq("is_read", false);
 
-console.log("MARK READ ERROR:", readError);
+    const { error: readError } = await supabase
+      .from("alerts")
+      .update({ is_read: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
 
-window.dispatchEvent(
-  new CustomEvent("notifications-read")
-);
+    window.dispatchEvent(new CustomEvent("notifications-read"));
+
     const { data, error } = await supabase
       .from("alerts")
       .select("*")
       .eq("user_id", user.id)
       .order("created_at", { ascending: false });
-
-    console.log("ALERTS:", data);
-    console.log("ERROR:", error);
 
     if (error) {
       console.error(error);
@@ -55,33 +44,34 @@ window.dispatchEvent(
     }
 
     setLoading(false);
+
+    const channel = supabase
+      .channel("alerts-realtime")
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "alerts",
+          filter: `user_id=eq.${user.id}`,
+        },
+        (payload) => {
+          setAlerts((prev) => [payload.new as any, ...prev]);
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   };
 
-  loadAlerts();
-  const channel = supabase
-  .channel("alerts-realtime")
-  .on(
-    "postgres_changes",
-    {
-      event: "INSERT",
-      schema: "public",
-      table: "alerts",
-    },
-(payload) => {
-  console.log("NEW ALERT:", payload);
-
-
-
-  setAlerts((prev) => [
-    payload.new as any,
-    ...prev,
-  ]);
-}
-  )
-  .subscribe();
+  const cleanupPromise = loadAlerts();
   return () => {
-  supabase.removeChannel(channel);
-};
+    cleanupPromise.then((cleanup) => {
+      if (cleanup) cleanup();
+    });
+  };
 }, []);
 
 if (loading) {

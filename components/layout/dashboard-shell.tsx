@@ -24,7 +24,7 @@ const nav = [
   { href: "/offer", label: "Offer Ride", icon: CarFront },
   { href: "/request-ride", label: "Request Ride", icon: Search },
   { href: "/orders", label: "Orders", icon: ClipboardList },
-
+  { href: "/notifications", label: "Notifications", icon: Bell },
   { href: "/profile", label: "Profile", icon: UserRound },
 ];
 
@@ -189,11 +189,9 @@ useEffect(() => {
   );
 }
 
-export function MobileBottomNav(
-  
-) {
-  const [role, setRole] =
-  useState<string | null>(null);
+export function MobileBottomNav() {
+  const [role, setRole] = useState<string | null>(null);
+  const [unreadCount, setUnreadCount] = useState(0);
 
 useEffect(() => {
   const loadRole = async () => {
@@ -216,9 +214,26 @@ useEffect(() => {
         .single();
 
     setRole(data?.role || null);
+    
+    const { count } = await supabase
+      .from("alerts")
+      .select("*", { count: "exact", head: true })
+      .eq("user_id", user.id)
+      .eq("is_read", false);
+    
+    setUnreadCount(count || 0);
   };
 
   loadRole();
+
+  const handleRead = () => {
+    loadRole(); // re-fetches both role and unread count
+  };
+
+  window.addEventListener("notifications-read", handleRead);
+  return () => {
+    window.removeEventListener("notifications-read", handleRead);
+  };
 }, []);
   const pathname = usePathname();
 const primary = nav.filter((n) => {
@@ -269,11 +284,16 @@ const primary = nav.filter((n) => {
             >
               <span
                 className={cn(
-                  "grid h-9 w-9 shrink-0 place-items-center rounded-2xl border",
+                  "grid h-9 w-9 shrink-0 place-items-center rounded-2xl border relative",
                   active ? "border-primary/30 bg-primary/10" : "border-transparent bg-muted/40",
                 )}
               >
                 <Icon className="h-4 w-4" />
+                {item.href === "/notifications" && unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white shadow-sm ring-2 ring-background">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
               </span>
               <span className="w-full text-center">{label}</span>
             </Link>
@@ -334,12 +354,31 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         },
         async (payload) => {
           if ((payload.new as any).user_id === userId) {
-            const audio = new Audio("/sounds/notification.mp3");
-            audio.play().catch(() => { /* Ignore autoplay errors if user hasn't interacted yet */ });
+            try {
+              const audio = new Audio("/sounds/notification.mp3");
+              await audio.play();
+            } catch (err) {
+              try {
+                // Fallback beep
+                const ctx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain);
+                gain.connect(ctx.destination);
+                osc.type = 'sine';
+                osc.frequency.setValueAtTime(880, ctx.currentTime);
+                osc.frequency.exponentialRampToValueAtTime(1760, ctx.currentTime + 0.1);
+                gain.gain.setValueAtTime(0, ctx.currentTime);
+                gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + 0.05);
+                gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+                osc.start(ctx.currentTime);
+                osc.stop(ctx.currentTime + 0.2);
+              } catch (fallbackErr) {}
+            }
             
             // Dispatch a custom event to update unread counts globally if needed
             if (typeof window !== "undefined") {
-              window.dispatchEvent(new Event("notifications-read"));
+              window.dispatchEvent(new CustomEvent("notifications-read"));
             }
             
             toast(
